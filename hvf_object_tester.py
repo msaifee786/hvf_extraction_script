@@ -35,16 +35,16 @@ import os
 import numpy as np
 
 # Import the HVF_Object class
-from includes.hvf_data.hvf_object import Hvf_Object;
+from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object;
 
 # Import logger class to handle any messages:
-from includes.utilities.logger import Logger;
+from hvf_extraction_script.utilities.logger import Logger;
 
 # Import general file functions:
-from includes.utilities.file_utils import File_Utils;
+from hvf_extraction_script.utilities.file_utils import File_Utils;
 
 # Import tester class:
-from includes.hvf_manager.hvf_test import Hvf_Test;
+from hvf_extraction_script.hvf_manager.hvf_test import Hvf_Test;
 
 # Default directory for unit tests:
 default_unit_test_dir = "default"

@@ -30,16 +30,16 @@ import numpy as np
 #import dlib
 
 # Import the HVF_Object class
-from includes.hvf_data.hvf_object import Hvf_Object;
+from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object;
 
 # Import logger class to handle any messages:
-from includes.utilities.logger import Logger;
+from hvf_extraction_script.utilities.logger import Logger;
 
 # Import file utilities
-from includes.utilities.file_utils import File_Utils;
+from hvf_extraction_script.utilities.file_utils import File_Utils;
 
 # Import tester class:
-from includes.hvf_manager.hvf_export import Hvf_Export;
+from hvf_extraction_script.hvf_manager.hvf_export import Hvf_Export;
 
 # Construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()

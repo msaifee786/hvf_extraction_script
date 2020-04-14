@@ -7,9 +7,11 @@ Python module for Humphrey Visual Field (HVF) report data extraction. Extracts d
 ### Requirements
 - Python 3.6.7 or higher
 - TesserOCR
-- PIL
+- Regex
+- Pillow
 - OpenCV 4.2.0
 - FuzzyWuzzy
+- Fuzzysearch
 
 ### Installation
 
@@ -132,4 +134,4 @@ GPL License
 This project was developed in the spirit of facilitating vision research. To that end, we encourage all to download, use, critique and improve upon the project. Collaboration requests are also welcomed.
 
 ## Acknowledgements
-- PyImageSearch for excellent tutorials on development
+- PyImageSearch for excellent tutorials on image processing
