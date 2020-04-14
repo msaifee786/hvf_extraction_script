@@ -895,18 +895,21 @@ class Hvf_Object:
 		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) and not (field == Regex_Utils.REGEX_FAILURE):
 			# Construct regex to extract the value
 			#print("Prelim rx: " + field)
-			regexp = '(.*)[DO]S (.*)[DO]C [XxK]*\s*(\d*){e<=1}';
+			regexp = '(.*)[DO]S (.*)[DO0]C [XxK]*\s*(\d*){e<=1}';
 
 			# Perform the regex search to find the text of interest
 			output = regex.search(regexp, field);
 
 			try:
+
 				sphere = output.group(1);
 				sphere = Regex_Utils.remove_spaces(sphere);
+				sphere = Regex_Utils.clean_punctuation_to_period(sphere);
 				sphere = Regex_Utils.remove_non_numeric(sphere, ['.', '+', '-']);
 
 				cyl = output.group(2);
 				cyl = Regex_Utils.remove_spaces(cyl);
+				cyl = Regex_Utils.clean_punctuation_to_period(cyl);
 				cyl = Regex_Utils.remove_non_numeric(cyl, ['.', '+', '-']);
 
 				axis = output.group(3);
