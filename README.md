@@ -24,8 +24,8 @@ Data is managed primarily through the Hvf_Object class, which contains the repor
 Processing a single image:
 
 ```shell
-from hvf_extraction_script import Hvf_Object
-from hvf_extraction_script import File_Utils
+from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object
+from hvf_extraction_script.utilities.file_utils import File_Utils
 
 hvf_img = File_Utils.read_image_from_file(hvf_img_path);
 hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_img);
@@ -47,7 +47,7 @@ hvf_obj = Hvf_Object.get_hvf_object_from_text(hvf_txt);
 Export to spreadsheet (tab-separated values):
 ```shell
 # Takes in a dictionary of filename_string -> hvf_obj
-from hvf_extraction_script import Hvf_Export;
+from hvf_extraction_script.hvf_manager.hvf_export import Hvf_Export;
 
 dict_of_hvf_objs = {“file1.PNG”: hvf_obj1, “file2.PNG”: hvf_obj2, “file3.PNG”: hvf_obj3 };
 spreadsheet_string = Hvf_Export.export_hvf_list_to_spreadsheet(dict_of_hvf_objs)
@@ -65,8 +65,8 @@ Single Image Testing:
 Running a single image test performs an extraction of an image report, shows its extraction data in pretty-print, and tests serialization/deserialization procedures
 
 ```shell
-from hvf_extraction_script import Hvf_Test
-from hvf_extraction_script import File_Utils
+from hvf_extraction_script.hvf_manager.hvf_test import Hvf_Test
+from hvf_extraction_script.utilities.file_utils import File_Utils
 
 image_path = “path/to/image/file.PNG”;
 hvf_image = File_Utils.read_image_from_file(image_path);
@@ -93,30 +93,38 @@ Running unit tests:
 Hvf_Test.test_unit_tests(unit_test_name)
 ...
 [SYSTEM] ================================================================================
-[SYSTEM] Starting test: v1_30
-[SYSTEM] Test v1_30: FAILED ==============================
-[SYSTEM] - Metadata: FULL MATCH
-[SYSTEM] - Raw Value Plot MISMATCH COUNT: 1
-[SYSTEM] --> Element (5, 2) - expected 24, actual 21
+[SYSTEM] Starting test: v2_26
+[SYSTEM] Test v2_26: FAILED ==============================
+[SYSTEM] - Metadata MISMATCH COUNT: 1
+[SYSTEM] --> Key: id - expected: 64681222, actual: 646871222
+[SYSTEM] - Raw Value Plot: FULL MATCH
 [SYSTEM] - Total Deviation Value Plot: FULL MATCH
 [SYSTEM] - Pattern Deviation Value Plot: FULL MATCH
 [SYSTEM] - Total Deviation Percentile Plot: FULL MATCH
 [SYSTEM] - Pattern Deviation Percentile Plot: FULL MATCH
-[SYSTEM] END Test v1_30 FAILURE REPORT =====================
+[SYSTEM] END Test v2_26 FAILURE REPORT =====================
+[SYSTEM] ================================================================================
+[SYSTEM] Starting test: v2_27
+[SYSTEM] Test v2_27: PASSED
+[SYSTEM] ================================================================================
+[SYSTEM] Starting test: v2_28
+[SYSTEM] Test v2_28: PASSED
+[SYSTEM] ================================================================================
+...
 [SYSTEM] ================================================================================
 [SYSTEM] UNIT TEST AGGREGATE METRICS:
 [SYSTEM] Total number of tests: 30
-[SYSTEM] Average extraction time per report: 5868ms
+[SYSTEM] Average extraction time per report: 4741ms
 [SYSTEM]
 [SYSTEM] Total number of metadata fields: 510
-[SYSTEM] Total number of metadata field errors: 16
-[SYSTEM] Metadata field error rate: 0.031
+[SYSTEM] Total number of metadata field errors: 7
+[SYSTEM] Metadata field error rate: 0.014
 [SYSTEM]
-[SYSTEM] Total number of value data points: 5047
-[SYSTEM] Total number of value data point errors: 44
-[SYSTEM] Value data point error rate: 0.009
+[SYSTEM] Total number of value data points: 3817
+[SYSTEM] Total number of value data point errors: 2
+[SYSTEM] Value data point error rate: 0.001
 [SYSTEM]
-[SYSTEM] Total number of percentile data points: 3453
+[SYSTEM] Total number of percentile data points: 3309
 [SYSTEM] Total number of percentile data point errors: 0
 [SYSTEM] Percentile data point error rate: 0.0
 ```
