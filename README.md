@@ -96,7 +96,7 @@ Hvf_Test.test_unit_tests(unit_test_name)
 [SYSTEM] Starting test: v2_26
 [SYSTEM] Test v2_26: FAILED ==============================
 [SYSTEM] - Metadata MISMATCH COUNT: 1
-[SYSTEM] --> Key: id - expected: 64681222, actual: 646871222
+[SYSTEM] --> Key: pupil_diameter - expected: 4.1, actual: 4.7
 [SYSTEM] - Raw Value Plot: FULL MATCH
 [SYSTEM] - Total Deviation Value Plot: FULL MATCH
 [SYSTEM] - Pattern Deviation Value Plot: FULL MATCH
