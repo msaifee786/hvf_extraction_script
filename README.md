@@ -1,6 +1,6 @@
 # HVF Extraction Script
 
-Python module for Humphrey Visual Field (HVF) report data extraction. Extracts data using OCR (tesseract) and image processing techniques (heavily reliant on openCV) to extract data into an object oriented format for further processing.
+Python module for Humphrey Visual Field (HVF) report data extraction. Extracts data using OCR (tesseract) and image processing techniques (openCV) to extract data into an object oriented format for further processing.
 
 ## Getting Started
 
@@ -122,7 +122,7 @@ Hvf_Test.test_unit_tests(unit_test_name)
 ```
 
 ## Authors
-- Murtaza Saifee, MD - Ophthalmology resident, UCSF
+- Murtaza Saifee, MD - Ophthalmology resident, UCSF. Email: saifeeapps@gmail.com
 
 ## Validation
 In progress
@@ -131,7 +131,7 @@ In progress
 GPL License
 
 ## Using/Contributing
-This project was developed in the spirit of facilitating vision research. To that end, we encourage all to download, use, critique and improve upon the project. Collaboration requests are also welcomed.
+This project was developed in the spirit of facilitating vision research. To that end, we encourage all to download, use, critique and improve upon the project. Fork requests are encouraged. Research collaboration requests are also welcomed.
 
 ## Acknowledgements
 - PyImageSearch for excellent tutorials on image processing
