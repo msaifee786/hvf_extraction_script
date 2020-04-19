@@ -18,6 +18,7 @@ import numpy as np
 
 # General purpose file functions:
 from hvf_extraction_script.utilities.file_utils import File_Utils
+from hvf_extraction_script.utilities.regex_utils import Regex_Utils
 
 # Import logger class to handle any messages:
 from hvf_extraction_script.utilities.logger import Logger;
@@ -175,8 +176,9 @@ class Hvf_Export:
 		# Construct our header list
 		headers_list = ['file_name'] + metadata_header_list + raw_val_list + tdv_list + tdp_list + pdv_list + pdp_list
 
-		# And construct our return string:
-		return_str = Hvf_Export.CELL_DELIMITER.join(headers_list) + "\n";
+		# And construct our return array:
+		string_list = [];
+		string_list.append(Hvf_Export.CELL_DELIMITER.join(headers_list))
 
 		# Now, iterate for each HVF object and pull the data:
 		for file_name in dict_of_hvf:
@@ -184,11 +186,17 @@ class Hvf_Export:
 			# Grab hvf_obj:
 			hvf_obj = dict_of_hvf[file_name];
 
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Converting File {}".format(file_name));
+
 			# Convert to string:
 			hvf_obj_line = file_name + Hvf_Export.CELL_DELIMITER + Hvf_Export.convert_hvf_obj_to_delimited_string(hvf_obj, metadata_header_list, Hvf_Export.CELL_DELIMITER);
 
-			# And write line to the running line:
-			return_str = return_str + hvf_obj_line + "\n";
+			#hvf_obj_line = Regex_Utils.clean_nonascii(hvf_obj_line)
 
-		# Finally, return string:
-		return return_str
+			# And add line to the running list:
+			string_list.append(hvf_obj_line);
+
+
+
+		# Finally, return joined string:
+		return "\n".join(string_list);
