@@ -115,9 +115,11 @@ class Hvf_Object:
 	KEYLABEL_MD = 'md';
 	KEYLABEL_PSD = 'psd';
 	KEYLABEL_VFI = 'vfi';
+	KEYLABEL_LAYOUT = 'layout_version';
 
 
 	METADATA_KEY_LIST = [
+		KEYLABEL_LAYOUT,
 		KEYLABEL_NAME,
 		KEYLABEL_DOB,
 		KEYLABEL_ID,
@@ -167,6 +169,7 @@ class Hvf_Object:
 	# Layout versions:
 	HVF_LAYOUT_V1 = "v1";
 	HVF_LAYOUT_V2 = "v2";
+	HVF_LAYOUT_V3 = "v3";
 
 
 
@@ -224,7 +227,7 @@ class Hvf_Object:
 		# Grab grayscale:
 		hvf_image_gray = cv2.cvtColor(hvf_image, cv2.COLOR_BGR2GRAY);
 
-		layout_version = Hvf_Object.find_image_layout_version(hvf_image_gray);
+		layout_version = Hvf_Object.find_image_layout_version(hvf_image_gray, width);
 
 		# Get absolute raw value plot:
 		raw_value_array = cls.get_abs_raw_val_plot(hvf_image_gray);
@@ -247,6 +250,10 @@ class Hvf_Object:
 		# Then, get the metric metadata (need to know field size):
 		metric_metadata = cls.get_metric_metadata_from_hvf_image(hvf_image_gray, layout_version, metadata[Hvf_Object.KEYLABEL_FIELD_SIZE]);
 		metadata.update(metric_metadata);
+
+		layout_dict = {Hvf_Object.KEYLABEL_LAYOUT: layout_version };
+
+		metadata.update(layout_dict);
 
 		# Instantiate a new object:
 		hvf_obj = Hvf_Object(metadata, raw_value_array, abs_dev_value_array, pat_dev_value_array, abs_dev_percentile_array, pat_dev_percentile_array, hvf_image)
@@ -507,9 +514,12 @@ class Hvf_Object:
 	# Searching done by regex and fuzzy matching
 	# Likely will need to be improved in future
 	@staticmethod
-	def find_image_layout_version(hvf_image):
+	def find_image_layout_version(hvf_image, width):
 
-		return_version = Hvf_Object.HVF_LAYOUT_V1;
+		return_version = Hvf_Object.HVF_LAYOUT_V2;
+
+		if (width < 1500):
+			return_version = Hvf_Object.HVF_LAYOUT_V1;
 
 		# Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
 		header_slice = Image_Utils.slice_image(hvf_image, 0, 0.15, 0, 0.31)
@@ -518,7 +528,7 @@ class Hvf_Object:
 		partial_fuzz_score = fuzz.partial_ratio("Date of Birth", header_text);
 
 		if (partial_fuzz_score > 50):
-			return_version = Hvf_Object.HVF_LAYOUT_V2;
+			return_version = Hvf_Object.HVF_LAYOUT_V3;
 
 		return return_version;
 
@@ -619,7 +629,7 @@ class Hvf_Object:
 		header_text_middle = "";
 
 		# For simiplicity, just combine all into same text string for analysi
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
 
 			# Header 2 slice:
 			# Height: 0.0 -> 0.17
@@ -640,7 +650,7 @@ class Hvf_Object:
 
 			header_text_middle = header_text2 + header_text3
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
 
 			# Middle Header slice:
 			# Height: 0.0 -> 0.27
@@ -706,7 +716,7 @@ class Hvf_Object:
 		# metadata entries in different ways if we fail
 
 		# ===== NAME/ID DETECTION =====
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
 			field, tokenized_header1_list = Regex_Utils.fuzzy_regex('Name: ', tokenized_header1_list);
 			hvf_metadata[Hvf_Object.KEYLABEL_NAME] = field;
 
@@ -714,7 +724,7 @@ class Hvf_Object:
 			field = Regex_Utils.remove_spaces(field);
 			hvf_metadata[Hvf_Object.KEYLABEL_ID] = field;
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
 			field, tokenized_header1_list = Regex_Utils.fuzzy_regex('Patient ID: ', tokenized_header1_list);
 
 			field = Regex_Utils.remove_spaces(field);
@@ -724,29 +734,29 @@ class Hvf_Object:
 			hvf_metadata[Hvf_Object.KEYLABEL_NAME] = field;
 
 		# ===== DOB DETECTION =====
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
 			field, tokenized_header4_list = Regex_Utils.fuzzy_regex('DOB: ', tokenized_header4_list);
 			field = Regex_Utils.remove_spaces(field);
 			field = Regex_Utils.remove_non_numeric(field, ['-', '/']);
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
 			field, tokenized_header1_list = Regex_Utils.fuzzy_regex('Date of Birth:', tokenized_header1_list);
 
 		hvf_metadata[Hvf_Object.KEYLABEL_DOB] = field;
 
 		# ===== TEST DATE DETECTION =====
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
 			field, tokenized_header4_list = Regex_Utils.fuzzy_regex('Date: ', tokenized_header4_list);
 			field = Regex_Utils.remove_spaces(field);
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
 			field, tokenized_header4_list = Regex_Utils.fuzzy_regex('Date: ', tokenized_header4_list);
 
 		hvf_metadata[Hvf_Object.KEYLABEL_TEST_DATE] = field;
 
 		# ===== LATERALITY DETECTION =====
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
 			field, tokenized_header4_list = Regex_Utils.fuzzy_regex('Eye: ', tokenized_header4_list);
 
 			# We know laterality can only be 'Left' or 'Right' - fuzzy match against each to
@@ -758,7 +768,7 @@ class Hvf_Object:
 				else:
 					field = Hvf_Object.HVF_OS;
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
 			field, tokenized_header1_list = Regex_Utils.fuzzy_regex_middle_field('| OD |', '(.*)', tokenized_header1_list);
 
 			# We know laterality can only be 'Left' or 'Right' - fuzzy match against each to
@@ -812,9 +822,9 @@ class Hvf_Object:
 		hvf_metadata[Hvf_Object.KEYLABEL_FALSE_NEG] = field;
 
 		# ===== FIELD SIZE DETECTION =====
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
 			source_string_list = tokenized_header1_list
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
 			source_string_list = tokenized_header4_list
 
 		list_of_size = [Hvf_Object.HVF_10_2, Hvf_Object.HVF_24_2, Hvf_Object.HVF_30_2];
@@ -892,7 +902,7 @@ class Hvf_Object:
 
 		# If V1 layout, need to clean up:
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) and not (field == Regex_Utils.REGEX_FAILURE):
+		if ((layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2)) and not (field == Regex_Utils.REGEX_FAILURE):
 			# Construct regex to extract the value
 			#print("Prelim rx: " + field)
 			regexp = '(.*)[DO]S (.*)[DO0]C [XxK]*\s*(\d*){e<=1}';
@@ -971,10 +981,10 @@ class Hvf_Object:
 		metric_metadata = {}
 
 		# ===== MD/PSD/VFI DETECTION =====
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
 			field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field('MD dB', 'MD\s*(.*)dB{e<=2}', tokenized_dev_val_list);
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
 
 			# Can either be MD<FIELD SIZE> (eg, MD24-2) or MD; regex for optional
 			label = 'MD{} dB'.format(field_size)
@@ -989,10 +999,10 @@ class Hvf_Object:
 
 		metric_metadata[Hvf_Object.KEYLABEL_MD] = field;
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
 			field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field('PSD dB', 'PSD\s*(.*)dB{e<=2}', tokenized_dev_val_list);
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
 
 			# Can either be PSD<FIELD SIZE> (eg, PSD24-2) or PSD; regex for optional
 			label = 'PSD{} dB'.format(field_size)
@@ -1005,10 +1015,10 @@ class Hvf_Object:
 
 		metric_metadata[Hvf_Object.KEYLABEL_PSD] = field;
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
 			field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field('VFI', 'VFI\s*(.*)%{e<=2}', tokenized_dev_val_list);
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
 			field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex('VFI: ', tokenized_dev_val_list);
 			#field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field('VFI', 'VFI:\s*(.*)%{e<=2}', tokenized_dev_val_list);
 
