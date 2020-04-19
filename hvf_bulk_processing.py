@@ -49,6 +49,8 @@ ap.add_argument("-t", "--text_directory", required=False,
 	help="path to directory of text files to convert to spreadsheet")
 ap.add_argument("-s", "--save_images", required=False,
 	help="path to directory of image files to read and save as text documents")
+ap.add_argument("-ss", "--save_images_sip", required=False,
+	help="path to directory of image files to read and save as text documents")
 args = vars(ap.parse_args())
 
 
@@ -128,9 +130,16 @@ elif (args["text_directory"]):
 	# Grab the argument directory for readability
 	directory = args["text_directory"];
 
+	Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "========== START READING ALL TEXT FILES ==========");
 	dict_of_hvf_objs = get_dict_of_hvf_objs_from_text(directory);
 
+	Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "========== FINISHED READING ALL TEXT FILES ==========");
+
+	Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "========== START EXPORT ==========");
+
 	return_string = Hvf_Export.export_hvf_list_to_spreadsheet(dict_of_hvf_objs)
+
+	Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "========== WRITING EXPORT SPREADSHEET ==========");
 
 	File_Utils.write_string_to_file(return_string, "output_spreadsheet.tsv")
 
@@ -145,16 +154,27 @@ elif (args["save_images"]):
 
 		os.mkdir(save_dir);
 
-	dict_of_hvf_objs = get_dict_of_hvf_objs_from_imgs(directory);
+	list_of_image_file_extensions = [".bmp", ".jpg", ".jpeg", ".png"];
+	list_of_img_paths = File_Utils.get_files_within_dir(directory, list_of_image_file_extensions);
 
-	dict_of_strings = {};
+	for hvf_img_path in list_of_img_paths:
 
-	for filename in dict_of_hvf_objs:
-		Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Writing text serialization file " + filename);
+		path, filename = os.path.split(hvf_img_path)
+		Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Reading HVF image " + filename);
+		hvf_img = File_Utils.read_image_from_file(hvf_img_path);
 
-		dict_of_strings[filename] = dict_of_hvf_objs[filename].serialize_to_json();
 
-	File_Utils.write_strings_to_directory_files(dict_of_strings, save_dir);
+		try:
+			hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_img);
+
+			file_path = os.path.join(save_dir, str(filename)+".txt");
+
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Writing text serialization file " + filename);
+			File_Utils.write_string_to_file(hvf_obj.serialize_to_json(), file_path)
+
+		except:
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "============= FAILURE on serializing " + filename);
+
 
 else:
 	Logger.get_logger().log_msg(Logger.DEBUG_FLAG_ERROR, "No input directory given");
