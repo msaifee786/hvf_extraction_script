@@ -135,7 +135,7 @@ class Hvf_Value:
 	@staticmethod
 	def get_value_from_display_string(num):
 
-		if (num == ""):
+		if (num == "" or num == " "):
 			num = Hvf_Value.VALUE_NO_VALUE;
 		elif (num == Hvf_Value.VALUE_FAILURE_CHAR):
 			num = Hvf_Value.VALUE_FAILURE;

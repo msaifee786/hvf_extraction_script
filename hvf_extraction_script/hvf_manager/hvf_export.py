@@ -25,7 +25,9 @@ from hvf_extraction_script.utilities.logger import Logger;
 
 # Import the HVF_Object class
 from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object;
-from hvf_extraction_script.hvf_data.hvf_plot_array import Hvf_Plot_Array
+from hvf_extraction_script.hvf_data.hvf_plot_array import Hvf_Plot_Array;
+from hvf_extraction_script.hvf_data.hvf_value import Hvf_Value;
+from hvf_extraction_script.hvf_data.hvf_perc_icon import Hvf_Perc_Icon;
 
 # Include editing modules:
 from hvf_extraction_script.hvf_manager.hvf_editor import Hvf_Editor;
@@ -52,8 +54,8 @@ class Hvf_Export:
 		plot_array = plot_obj.get_plot_array();
 
 		# Transpose if left:
-		if (laterality == "Left"):
-			plot_array = Hvf_Editor.transpose_array(plot_array);
+		#if (laterality == "Left"):
+		#	plot_array = Hvf_Editor.transpose_array(plot_array);
 
 		plot_array_string = Hvf_Plot_Array.get_array_string(plot_array, plot_obj.get_icon_type(), delimiter);
 		plot_array_string = plot_array_string.replace("\n\n", delimiter);
@@ -200,3 +202,139 @@ class Hvf_Export:
 
 		# Finally, return joined string:
 		return "\n".join(string_list);
+
+
+	###############################################################################
+	# SPREADSHEET IMPORTING TO HVF OBJECT DICTIONARY ##############################
+	###############################################################################
+
+	############################################################################
+	# Given a data string, slurp in file into a list of rows (which are dicts
+	# themselves)
+	def slurp_string_to_dict_list(data_string):
+
+		return_list = [];
+
+		string_list = data_string.strip("\n").split("\n")
+
+		header_list = string_list.pop(0).split(Hvf_Export.CELL_DELIMITER);
+
+		for line in string_list:
+
+			line_data = line.split(Hvf_Export.CELL_DELIMITER);
+
+			line_dict = dict(zip(header_list, line_data))
+
+			return_list.append(line_dict)
+
+		return return_list;
+
+
+	###############################################################################
+	# Given a line, generate the HVF object from the data
+
+	def get_hvf_object_from_line(line):
+
+		line, raw_plot = Hvf_Export.get_hvf_plot_from_line(line, Hvf_Plot_Array.PLOT_RAW, Hvf_Plot_Array.PLOT_VALUE)
+		line, tdv_plot = Hvf_Export.get_hvf_plot_from_line(line, Hvf_Plot_Array.PLOT_TOTAL_DEV, Hvf_Plot_Array.PLOT_VALUE)
+		line, tdp_plot = Hvf_Export.get_hvf_plot_from_line(line, Hvf_Plot_Array.PLOT_TOTAL_DEV, Hvf_Plot_Array.PLOT_PERC)
+		line, pdv_plot = Hvf_Export.get_hvf_plot_from_line(line, Hvf_Plot_Array.PLOT_PATTERN_DEV, Hvf_Plot_Array.PLOT_VALUE)
+		line, pdp_plot = Hvf_Export.get_hvf_plot_from_line(line, Hvf_Plot_Array.PLOT_PATTERN_DEV, Hvf_Plot_Array.PLOT_PERC)
+
+
+		hvf_obj = Hvf_Object(line, raw_plot, tdv_plot, pdv_plot, tdp_plot, pdp_plot, None);
+
+		return hvf_obj;
+
+
+	def get_hvf_plot_from_line(line, plot_type, icon_type):
+
+		plot_name = ""
+		plot_values_array = 0;
+
+
+		if (plot_type == Hvf_Plot_Array.PLOT_RAW):
+			plot_name = "raw";
+			plot_array = np.zeros((10, 10, 1), dtype=Hvf_Value);
+
+		if (plot_type == Hvf_Plot_Array.PLOT_TOTAL_DEV):
+			if (icon_type == Hvf_Plot_Array.PLOT_VALUE):
+				plot_name = "tdv";
+				plot_array = np.zeros((10, 10, 1), dtype=Hvf_Value);
+
+			if (icon_type == Hvf_Plot_Array.PLOT_PERC):
+				plot_name = "tdp";
+				plot_array = np.zeros((10, 10, 1), dtype=Hvf_Perc_Icon);
+
+		if (plot_type == Hvf_Plot_Array.PLOT_PATTERN_DEV):
+			if (icon_type == Hvf_Plot_Array.PLOT_VALUE):
+				plot_name = "pdv";
+				plot_array = np.zeros((10, 10, 1), dtype=Hvf_Value);
+
+			if (icon_type == Hvf_Plot_Array.PLOT_PERC):
+				plot_name = "pdp"
+				plot_array = np.zeros((10, 10, 1), dtype=Hvf_Perc_Icon);
+
+
+		is_blank = True;
+		for i in range(0, 100):
+			header_name = plot_name + str(i);
+
+			data_point = line.pop(header_name).strip();
+
+			if (data_point == ""):
+				# Empty strings cause issues - replace with space
+				data_point = " ";
+			else:
+				is_blank = False;
+
+			if (icon_type == Hvf_Plot_Array.PLOT_VALUE):
+				cell_object = Hvf_Value.get_value_from_display_string(data_point)
+
+			if (icon_type == Hvf_Plot_Array.PLOT_PERC):
+				cell_object = Hvf_Perc_Icon.get_perc_icon_from_char(data_point);
+
+			x = int(i % 10);
+			y = int(i/10);
+
+			plot_array[x, y] = cell_object;
+
+		if (is_blank and plot_type == Hvf_Plot_Array.PLOT_PATTERN_DEV):
+			plot_array = Hvf_Plot_Array.NO_PATTERN_DETECT;
+
+		plot_array_obj = Hvf_Plot_Array(plot_type, icon_type, plot_array, None);
+
+		return line, plot_array_obj;
+
+	###############################################################################
+	# Given a dict of file_name->hvf objects, creates a delimited string containing
+	# all the data (for export to a spreadsheet file). Delimiter specified in the
+	# class code.
+
+	# Given an exported spreadsheet (delimited string), creates a dict of
+	# file_name->hvf objects. Inverse function of export.
+
+	def import_hvf_list_from_spreadsheet(delimited_string):
+
+		return_dict = {};
+
+		# We will assume the spreadsheet is of correct format - no error checking
+		# This means: columns are of correct names (corresponding to metadata, etc)
+
+		# We assume first line is column header, followed by lines of data
+		# First, slurp in entire string into a list of dictionaries to we can
+		# process each one by one
+
+		list_of_lines = Hvf_Export.slurp_string_to_dict_list(delimited_string)
+
+		# Now, process each one by one:
+
+		for line in list_of_lines:
+
+			file_name = line.pop('file_name');
+
+			hvf_obj = Hvf_Export.get_hvf_object_from_line(line);
+
+			return_dict[file_name] = hvf_obj;
+
+		return return_dict;

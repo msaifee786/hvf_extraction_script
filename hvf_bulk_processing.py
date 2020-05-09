@@ -17,6 +17,10 @@
 #			Outputs a directory of JSON text files into directory
 #			"serialized_hvf"; makes directory if does not exist
 #
+#		python hvf_bulk_processing -f <path_to_tsv_file>
+#			Outputs a directory of JSON text files into directory
+#			"serialized_hvf"; makes directory if does not exist
+#
 ###############################################################################
 
 # Import necessary packages
@@ -49,8 +53,8 @@ ap.add_argument("-t", "--text_directory", required=False,
 	help="path to directory of text files to convert to spreadsheet")
 ap.add_argument("-s", "--save_images", required=False,
 	help="path to directory of image files to read and save as text documents")
-ap.add_argument("-ss", "--save_images_sip", required=False,
-	help="path to directory of image files to read and save as text documents")
+ap.add_argument("-f", "--import_file", required=False,
+	help="path to TSV file to import and save as text documents")
 args = vars(ap.parse_args())
 
 
@@ -175,6 +179,33 @@ elif (args["save_images"]):
 		except:
 			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "============= FAILURE on serializing " + filename);
 
+elif (args["import_file"]):
+
+	path_to_tsv_file = args["import_file"];
+
+	save_dir = "serialized_hvfs"
+
+	if not os.path.isdir(save_dir):
+		Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Making new save directory: " + save_dir);
+
+		os.mkdir(save_dir);
+
+	tsv_file_string = File_Utils.read_text_from_file(path_to_tsv_file);
+
+
+	dict_of_hvf_objs = Hvf_Export.import_hvf_list_from_spreadsheet(tsv_file_string);
+
+	for filename in dict_of_hvf_objs.keys():
+		hvf_obj = dict_of_hvf_objs.get(filename)
+
+		try:
+			file_path = os.path.join(save_dir, str(filename));
+
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Writing text serialization file " + filename);
+			File_Utils.write_string_to_file(hvf_obj.serialize_to_json(), file_path)
+
+		except:
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "============= FAILURE on serializing " + filename);
 
 else:
 	Logger.get_logger().log_msg(Logger.DEBUG_FLAG_ERROR, "No input directory given");
