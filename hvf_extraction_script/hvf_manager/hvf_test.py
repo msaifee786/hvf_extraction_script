@@ -249,10 +249,12 @@ class Hvf_Test:
 		test_image_path = Hvf_Test.construct_image_dir(sub_dir);
 		serialization_path = Hvf_Test.construct_serialization_dir(sub_dir);
 
+		dict_of_times = {};
+		reference_hvf_obj_dict = {};
+		test_hvf_obj_dict = {};
 
-		# Declare variable to keep track of times, errors, etc
-		# Will be a list of raw data --> we will calculate metrics at the end
-		testing_data_list = [];
+		Logger.get_logger().log_msg(debug_level, "================================================================================");
+		Logger.get_logger().log_msg(debug_level, "Starting HVF Image Extractions");
 
 
 		# For each image in the test folder:
@@ -265,269 +267,53 @@ class Hvf_Test:
 			# Then, find corresponding serialization text file
 			filename_root, ext = os.path.splitext(hvf_image_name);
 
-			Logger.get_logger().log_msg(debug_level, "================================================================================");
-			Logger.get_logger().log_msg(debug_level, "Starting test: " + filename_root);
-
-			# Declare our testing_data dictionary to keep track of data:
-			# Vals = count of total values
-			# Errors: count of errors
-			# Metadata errors are stored as list of tuples (expected, actual)
-			testing_data_dict = {
-				"time" : 0,
-				"metadata_vals" : 0,
-				"metadata_errors" : [],
-				"value_plot_vals" : 0,
-				"value_plot_errors" : 0,
-				"perc_plot_vals" : 0,
-				"perc_plot_errors" : 0
-
-			};
-
-
 			# Load image, convert to an hvf_obj
 			hvf_image = File_Utils.read_image_from_file(test_image_path + hvf_image_name)
 
+			Logger.get_logger().log_msg(debug_level, "Extracting HVF report image {}".format(hvf_image_name));
 
 			Logger.get_logger().log_time( "Test " + filename_root, Logger.TIME_START);
-			hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image);
+			test_hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image);
 			time_elapsed = Logger.get_logger().log_time( "Test " + filename_root, Logger.TIME_END);
 
 
-			testing_data_dict["time"] = time_elapsed;
-
 			serialization_file_name = serialization_path + filename_root + ".txt";
 			serialization = File_Utils.read_text_from_file(serialization_file_name);
+			reference_hvf_obj = Hvf_Object.get_hvf_object_from_text(serialization);
 
-			# Check for equality
-			serialized_obj = hvf_obj.serialize_to_json();
+			dict_of_times[filename_root] = time_elapsed;
+			reference_hvf_obj_dict[filename_root] = reference_hvf_obj;
+			test_hvf_obj_dict[filename_root] = test_hvf_obj;
 
-			# Print if passed or not; if not, print the diff
-			if (hvf_obj.equals(Hvf_Object.get_hvf_object_from_text(serialization))):
-				Logger.get_logger().log_msg(debug_level, "Test " + filename_root + ": PASSED");
+		Hvf_Test.perform_hvf_obj_test_by_list(reference_hvf_obj_dict, test_hvf_obj_dict, dict_of_times)
 
-				# Need to count number of vals in metadata, value and perc plots
-				testing_data_dict["metadata_vals"] = len(hvf_obj.metadata);
-				testing_data_dict["value_plot_vals"] = Hvf_Test.count_val_nonempty_elements(hvf_obj.abs_dev_value_array) + Hvf_Test.count_val_nonempty_elements(hvf_obj.pat_dev_value_array);
-				testing_data_dict["perc_plot_vals"] = Hvf_Test.count_perc_nonempty_elements(hvf_obj.abs_dev_percentile_array) + Hvf_Test.count_perc_nonempty_elements(hvf_obj.pat_dev_percentile_array);
+		return "";
 
-			else:
-				Logger.get_logger().log_msg(debug_level, "Test " + filename_root + ": FAILED ==============================")
+	# Do unit tests of two sets of hvf objects
+	@staticmethod
+	def perform_hvf_obj_test_by_list(reference_hvf_obj_dict, test_hvf_obj_dict, dict_of_times):
 
-				# Compare each field between the object and the expected result, so we can
-				# comparison data:
-				test_hvf_obj = Hvf_Object.get_hvf_object_from_text(serialization);
+		debug_level = Logger.DEBUG_FLAG_SYSTEM;
 
-				# Compare metadata:
-				metadata = hvf_obj.metadata;
-				test_metadata = test_hvf_obj.metadata;
+		# Declare variable to keep track of times, errors, etc
+		# Will be a list of raw data --> we will calculate metrics at the end
+		testing_data_list = [];
 
-				# Iterate through the keys, if mismatch then print and flip the flag; otherwise
-				# if we iterate through all and no mismatch, declare full match
-				metadata_fail_cnt = 0;
-				metadata_fail_str_list = [];
 
-				full_match = True
-				for key in test_metadata:
+		# For each image in the test folder:
+		for test_name in reference_hvf_obj_dict.keys():
 
-					# Count as we go:
-					testing_data_dict["metadata_vals"] = testing_data_dict["metadata_vals"]+1;
+			reference_hvf_obj = reference_hvf_obj_dict.get(test_name);
+			test_hvf_obj = test_hvf_obj_dict.get(test_name);
 
-					exp_val = test_metadata[key];
-					val = metadata.get(key, "<No value>");
+			testing_data_dict, testing_msgs = Hvf_Test.test_hvf_obj(test_name, reference_hvf_obj, test_hvf_obj)
 
-					if not(exp_val == val):
-						metadata_fail_cnt = metadata_fail_cnt + 1;
-						fail_str = "Key: " + str(key) + " - expected: " + str(exp_val) + ", actual: " + str(val);
-						metadata_fail_str_list.append(fail_str)
+			testing_data_dict["time"] = dict_of_times.get(test_name, 0);
 
-						metadata_error = (exp_val, val);
-						testing_data_dict["metadata_errors"].append(metadata_error);
+			# Print messages
+			for msg in testing_msgs:
+				Logger.get_logger().log_msg(debug_level, msg)
 
-				# Print the results:
-				if (metadata_fail_cnt == 0):
-					Logger.get_logger().log_msg(debug_level, "- Metadata: FULL MATCH");
-
-				else:
-					Logger.get_logger().log_msg(debug_level, "- Metadata MISMATCH COUNT: " + str(metadata_fail_cnt));
-
-					for i in range(len(metadata_fail_str_list)):
-						Logger.get_logger().log_msg(debug_level, "--> " + metadata_fail_str_list[i]);
-
-
-				# Compare raw value plots:
-				actual = hvf_obj.raw_value_array;
-				expected = test_hvf_obj.raw_value_array
-
-				fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
-
-				total_val_count = Hvf_Test.count_val_nonempty_elements(hvf_obj.raw_value_array);
-
-
-				testing_data_dict["value_plot_vals"] = testing_data_dict["value_plot_vals"]+total_val_count;
-				testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"]+fail_count;
-
-				# Print the results:
-				if (fail_count == 0):
-					Logger.get_logger().log_msg(debug_level, "- Raw Value Plot: FULL MATCH");
-				else:
-					Logger.get_logger().log_msg(debug_level, "- Raw Value Plot MISMATCH COUNT: " + str(fail_count));
-					for i in range(len(fail_string_list)):
-						Logger.get_logger().log_msg(debug_level,fail_string_list[i]);
-
-				# Next compare value and perc plots:
-
-				# Absolute val:
-				actual = hvf_obj.abs_dev_value_array;
-				expected = test_hvf_obj.abs_dev_value_array
-
-				fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
-
-				total_val_count = Hvf_Test.count_val_nonempty_elements(hvf_obj.abs_dev_value_array);
-
-
-				testing_data_dict["value_plot_vals"] = testing_data_dict["value_plot_vals"]+total_val_count;
-				testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"]+fail_count;
-
-				# Print the results:
-				if (fail_count == 0):
-					Logger.get_logger().log_msg(debug_level, "- Total Deviation Value Plot: FULL MATCH");
-				else:
-					Logger.get_logger().log_msg(debug_level, "- Total Deviation Value Plot MISMATCH COUNT: " + str(fail_count));
-					for i in range(len(fail_string_list)):
-						Logger.get_logger().log_msg(debug_level,fail_string_list[i]);
-
-				# Pattern val:
-				actual = hvf_obj.pat_dev_value_array;
-				expected = test_hvf_obj.pat_dev_value_array
-
-				# Need to check if pattern plot has been generated, or if fields are too depressed
-				if (type(actual.plot_array) == type(expected.plot_array)):
-
-					if (actual.is_pattern_not_generated()):
-
-						# They are both in agreement, no pattern detected
-
-						fail_count = 0;
-						fail_string_list = [];
-						total_val_count = 1;
-
-					else:
-
-						# Both are arrays, and we can compare as usual
-						fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
-						total_val_count = Hvf_Test.count_val_nonempty_elements(actual);
-
-
-				else:
-					# The two types are in disagreement
-					if (actual.is_pattern_not_generated()):
-
-						# They are in disagreement -- actual is no pattern detect, but we expected an array
-
-						fail_string_list.append("Extracted NO PATTERN, but expected a pattern percentile array");
-						total_val_count = Hvf_Test.count_val_nonempty_elements(expected);
-						fail_count = total_val_count;
-
-
-					else:
-
-						# They are in disagreement -- actual is an array, but we didn't expect one
-						fail_string_list.append("Extracted a pattern percentile array, but expected NO PATTERN");
-						total_val_count = Hvf_Test.count_val_nonempty_elements(actual);
-						fail_count = total_val_count;
-
-				testing_data_dict["value_plot_vals"] = testing_data_dict["value_plot_vals"]+total_val_count;
-				testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"]+fail_count;
-
-				# Print the results:
-				if (fail_count == 0):
-					Logger.get_logger().log_msg(debug_level, "- Pattern Deviation Value Plot: FULL MATCH");
-
-				else:
-					Logger.get_logger().log_msg(debug_level, "- Pattern Deviation Value Plot MISMATCH COUNT: " + str(fail_count));
-					for i in range(len(fail_string_list)):
-						Logger.get_logger().log_msg(debug_level,fail_string_list[i]);
-
-				# Absolute perc:
-				actual = hvf_obj.abs_dev_percentile_array;
-				expected = test_hvf_obj.abs_dev_percentile_array
-
-				fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
-
-				total_val_count = Hvf_Test.count_perc_nonempty_elements(hvf_obj.abs_dev_percentile_array);
-
-				testing_data_dict["perc_plot_vals"] = testing_data_dict["perc_plot_vals"]+total_val_count;
-				testing_data_dict["perc_plot_errors"] = testing_data_dict["perc_plot_errors"]+fail_count;
-
-
-				# Print the results:
-				if (fail_count == 0):
-					Logger.get_logger().log_msg(debug_level, "- Total Deviation Percentile Plot: FULL MATCH");
-				else:
-					Logger.get_logger().log_msg(debug_level, "- Total Deviation Percentile Plot MISMATCH COUNT: " + str(fail_count));
-					for i in range(len(fail_string_list)):
-						Logger.get_logger().log_msg(debug_level,fail_string_list[i]);
-
-
-				# Pattern perc:
-				actual = hvf_obj.pat_dev_percentile_array;
-				expected = test_hvf_obj.pat_dev_percentile_array
-
-
-				# Need to check if pattern plot has been generated, or if fields are too depressed
-
-
-				if (type(actual.plot_array) == type(expected.plot_array)):
-
-					if ((type(actual.plot_array) == str) and (str(actual.plot_array) == Hvf_Object.NO_PATTERN_DETECT)):
-
-						# They are both in agreement, no pattern detected
-
-						fail_count = 0;
-						fail_string_list = [];
-						total_val_count = 1;
-
-					else:
-
-						# Both are arrays, and we can compare as usual
-						fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
-						total_val_count = Hvf_Test.count_perc_nonempty_elements(actual);
-
-
-				else:
-					# The two types are in disagreement
-
-					if ((type(actual.plot_array) == str) and (str(actual.plot_array) == Hvf_Object.NO_PATTERN_DETECT)):
-
-						# They are in disagreement -- actual is no pattern detect, but we expected an array
-
-						fail_string_list.append("Extracted NO PATTERN, but expected a pattern percentile array");
-						total_val_count = Hvf_Test.count_perc_nonempty_elements(expected);
-						fail_count = total_val_count;
-
-
-					else:
-
-						# They are in disagreement -- actual is an array, but we didn't expect one
-						fail_string_list.append("Extracted a pattern percentile array, but expected NO PATTERN");
-						total_val_count = Hvf_Test.count_perc_nonempty_elements(actual);
-						fail_count = total_val_count;
-
-
-				testing_data_dict["perc_plot_vals"] = testing_data_dict["perc_plot_vals"]+total_val_count;
-				testing_data_dict["perc_plot_errors"] = testing_data_dict["perc_plot_errors"]+fail_count;
-
-
-				# Print the results:
-				if (fail_count == 0):
-					Logger.get_logger().log_msg(debug_level, "- Pattern Deviation Percentile Plot: FULL MATCH");
-				else:
-					Logger.get_logger().log_msg(debug_level, "- Pattern Deviation Percentile Plot MISMATCH COUNT: " + str(fail_count));
-					for i in range(len(fail_string_list)):
-						Logger.get_logger().log_msg(debug_level,fail_string_list[i]);
-
-
-				Logger.get_logger().log_msg(debug_level, "END Test " + filename_root + " FAILURE REPORT =====================")
 
 			testing_data_list.append(testing_data_dict);
 
@@ -550,7 +336,8 @@ class Hvf_Test:
 		list_of_times = list(map(lambda x: x["time"], testing_data_list));
 		average_time = round(sum(list_of_times)/len(list_of_times))
 
-		Logger.get_logger().log_msg(debug_level, "Average extraction time per report: " + str(average_time) + "ms")
+		if (average_time > 0):
+			Logger.get_logger().log_msg(debug_level, "Average extraction time per report: " + str(average_time) + "ms")
 
 		Logger.get_logger().log_msg(debug_level, "")
 
@@ -584,6 +371,261 @@ class Hvf_Test:
 
 
 		return "";
+
+
+
+	def test_hvf_obj(test_name, reference_hvf_obj, test_hvf_obj):
+
+		testing_msgs = [];
+		testing_msgs.append("================================================================================");
+		testing_msgs.append("Starting test: " + test_name)
+
+		# Declare our testing_data dictionary to keep track of data:
+		# Vals = count of total values
+		# Errors: count of errors
+		# Metadata errors are stored as list of tuples (expected, actual)
+		testing_data_dict = {
+			"time" : 0,
+			"metadata_vals" : 0,
+			"metadata_errors" : [],
+			"value_plot_vals" : 0,
+			"value_plot_errors" : 0,
+			"perc_plot_vals" : 0,
+			"perc_plot_errors" : 0
+
+		};
+
+
+		# Print if passed or not; if not, print the diff
+		if (reference_hvf_obj.equals(test_hvf_obj)):
+			testing_msgs.append("Test " + test_name + ": PASSED");
+
+			# Need to count number of vals in metadata, value and perc plots
+			testing_data_dict["metadata_vals"] = len(reference_hvf_obj.metadata);
+			testing_data_dict["value_plot_vals"] = Hvf_Test.count_val_nonempty_elements(reference_hvf_obj.abs_dev_value_array) + Hvf_Test.count_val_nonempty_elements(reference_hvf_obj.pat_dev_value_array);
+			testing_data_dict["perc_plot_vals"] = Hvf_Test.count_perc_nonempty_elements(reference_hvf_obj.abs_dev_percentile_array) + Hvf_Test.count_perc_nonempty_elements(reference_hvf_obj.pat_dev_percentile_array);
+
+		else:
+			testing_msgs.append("Test " + test_name + ": FAILED ==============================");
+
+			# Compare each field between the object and the expected result, so we can
+			# comparison data:
+
+			# Compare metadata:
+			metadata = test_hvf_obj.metadata;
+			test_metadata = reference_hvf_obj.metadata;
+
+			# Iterate through the keys, if mismatch then print and flip the flag; otherwise
+			# if we iterate through all and no mismatch, declare full match
+			metadata_fail_cnt = 0;
+			metadata_fail_str_list = [];
+
+			full_match = True
+			for key in test_metadata:
+
+				# Count as we go:
+				testing_data_dict["metadata_vals"] = testing_data_dict["metadata_vals"]+1;
+
+				exp_val = test_metadata[key];
+				val = metadata.get(key, "<No value>");
+
+				if not(exp_val == val):
+					metadata_fail_cnt = metadata_fail_cnt + 1;
+					fail_str = "Key: " + str(key) + " - expected: " + str(exp_val) + ", actual: " + str(val);
+					metadata_fail_str_list.append(fail_str)
+
+					metadata_error = (exp_val, val);
+					testing_data_dict["metadata_errors"].append(metadata_error);
+
+			# Print the results:
+			if (metadata_fail_cnt == 0):
+				testing_msgs.append("- Metadata: FULL MATCH");
+
+			else:
+				testing_msgs.append("- Metadata MISMATCH COUNT: " + str(metadata_fail_cnt));
+
+				for i in range(len(metadata_fail_str_list)):
+					testing_msgs.append("--> " + metadata_fail_str_list[i]);
+
+
+			# Compare raw value plots:
+			actual = test_hvf_obj.raw_value_array;
+			expected = reference_hvf_obj.raw_value_array
+
+			fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
+
+			total_val_count = Hvf_Test.count_val_nonempty_elements(reference_hvf_obj.raw_value_array);
+
+
+			testing_data_dict["value_plot_vals"] = testing_data_dict["value_plot_vals"]+total_val_count;
+			testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"]+fail_count;
+
+			# Print the results:
+			if (fail_count == 0):
+				testing_msgs.append("- Raw Value Plot: FULL MATCH");
+			else:
+				testing_msgs.append("- Raw Value Plot MISMATCH COUNT: " + str(fail_count));
+				for i in range(len(fail_string_list)):
+					testing_msgs.append(fail_string_list[i]);
+
+			# Next compare value and perc plots:
+
+			# Absolute val:
+			actual = test_hvf_obj.abs_dev_value_array;
+			expected = reference_hvf_obj.abs_dev_value_array
+
+			fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
+
+			total_val_count = Hvf_Test.count_val_nonempty_elements(reference_hvf_obj.abs_dev_value_array);
+
+
+			testing_data_dict["value_plot_vals"] = testing_data_dict["value_plot_vals"]+total_val_count;
+			testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"]+fail_count;
+
+			# Print the results:
+			if (fail_count == 0):
+				testing_msgs.append("- Total Deviation Value Plot: FULL MATCH");
+			else:
+				testing_msgs.append("- Total Deviation Value Plot MISMATCH COUNT: " + str(fail_count));
+				for i in range(len(fail_string_list)):
+					testing_msgs.append(fail_string_list[i]);
+
+			# Pattern val:
+			actual = test_hvf_obj.pat_dev_value_array;
+			expected = reference_hvf_obj.pat_dev_value_array
+
+			# Need to check if pattern plot has been generated, or if fields are too depressed
+			if (type(actual.plot_array) == type(expected.plot_array)):
+
+				if (actual.is_pattern_not_generated()):
+
+					# They are both in agreement, no pattern detected
+
+					fail_count = 0;
+					fail_string_list = [];
+					total_val_count = 1;
+
+				else:
+
+					# Both are arrays, and we can compare as usual
+					fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
+					total_val_count = Hvf_Test.count_val_nonempty_elements(actual);
+
+
+			else:
+				# The two types are in disagreement
+				if (actual.is_pattern_not_generated()):
+
+					# They are in disagreement -- actual is no pattern detect, but we expected an array
+
+					fail_string_list.append("Extracted NO PATTERN, but expected a pattern percentile array");
+					total_val_count = Hvf_Test.count_val_nonempty_elements(expected);
+					fail_count = total_val_count;
+
+
+				else:
+
+					# They are in disagreement -- actual is an array, but we didn't expect one
+					fail_string_list.append("Extracted a pattern percentile array, but expected NO PATTERN");
+					total_val_count = Hvf_Test.count_val_nonempty_elements(actual);
+					fail_count = total_val_count;
+
+			testing_data_dict["value_plot_vals"] = testing_data_dict["value_plot_vals"]+total_val_count;
+			testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"]+fail_count;
+
+			# Print the results:
+			if (fail_count == 0):
+				testing_msgs.append("- Pattern Deviation Value Plot: FULL MATCH");
+
+			else:
+				testing_msgs.append("- Pattern Deviation Value Plot MISMATCH COUNT: " + str(fail_count));
+				for i in range(len(fail_string_list)):
+					testing_msgs.append(fail_string_list[i]);
+
+			# Absolute perc:
+			actual = test_hvf_obj.abs_dev_percentile_array;
+			expected = reference_hvf_obj.abs_dev_percentile_array
+
+			fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
+
+			total_val_count = Hvf_Test.count_perc_nonempty_elements(reference_hvf_obj.abs_dev_percentile_array);
+
+			testing_data_dict["perc_plot_vals"] = testing_data_dict["perc_plot_vals"]+total_val_count;
+			testing_data_dict["perc_plot_errors"] = testing_data_dict["perc_plot_errors"]+fail_count;
+
+
+			# Print the results:
+			if (fail_count == 0):
+				testing_msgs.append("- Total Deviation Percentile Plot: FULL MATCH");
+			else:
+				testing_msgs.append("- Total Deviation Percentile Plot MISMATCH COUNT: " + str(fail_count));
+				for i in range(len(fail_string_list)):
+					testing_msgs.append(fail_string_list[i]);
+
+
+			# Pattern perc:
+			actual = test_hvf_obj.pat_dev_percentile_array;
+			expected = reference_hvf_obj.pat_dev_percentile_array
+
+
+			# Need to check if pattern plot has been generated, or if fields are too depressed
+
+
+			if (type(actual.plot_array) == type(expected.plot_array)):
+
+				if ((type(actual.plot_array) == str) and (str(actual.plot_array) == Hvf_Object.NO_PATTERN_DETECT)):
+
+					# They are both in agreement, no pattern detected
+
+					fail_count = 0;
+					fail_string_list = [];
+					total_val_count = 1;
+
+				else:
+
+					# Both are arrays, and we can compare as usual
+					fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
+					total_val_count = Hvf_Test.count_perc_nonempty_elements(actual);
+
+
+			else:
+				# The two types are in disagreement
+
+				if ((type(actual.plot_array) == str) and (str(actual.plot_array) == Hvf_Object.NO_PATTERN_DETECT)):
+
+					# They are in disagreement -- actual is no pattern detect, but we expected an array
+
+					fail_string_list.append("Extracted NO PATTERN, but expected a pattern percentile array");
+					total_val_count = Hvf_Test.count_perc_nonempty_elements(expected);
+					fail_count = total_val_count;
+
+
+				else:
+
+					# They are in disagreement -- actual is an array, but we didn't expect one
+					fail_string_list.append("Extracted a pattern percentile array, but expected NO PATTERN");
+					total_val_count = Hvf_Test.count_perc_nonempty_elements(actual);
+					fail_count = total_val_count;
+
+
+			testing_data_dict["perc_plot_vals"] = testing_data_dict["perc_plot_vals"]+total_val_count;
+			testing_data_dict["perc_plot_errors"] = testing_data_dict["perc_plot_errors"]+fail_count;
+
+
+			# Print the results:
+			if (fail_count == 0):
+				testing_msgs.append("- Pattern Deviation Percentile Plot: FULL MATCH");
+			else:
+				testing_msgs.append("- Pattern Deviation Percentile Plot MISMATCH COUNT: " + str(fail_count));
+				for i in range(len(fail_string_list)):
+					testing_msgs.append(fail_string_list[i]);
+
+
+			testing_msgs.append("END Test " + test_name + " FAILURE REPORT =====================")
+
+		return testing_data_dict, testing_msgs;
+
+
 
 	###############################################################################
 	# ADD NEW UNIT TESTS ##########################################################
