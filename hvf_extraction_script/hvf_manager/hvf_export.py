@@ -241,6 +241,9 @@ class Hvf_Export:
 		line, pdv_plot = Hvf_Export.get_hvf_plot_from_line(line, Hvf_Plot_Array.PLOT_PATTERN_DEV, Hvf_Plot_Array.PLOT_VALUE)
 		line, pdp_plot = Hvf_Export.get_hvf_plot_from_line(line, Hvf_Plot_Array.PLOT_PATTERN_DEV, Hvf_Plot_Array.PLOT_PERC)
 
+		# Clean up metadata:
+		for key in line.keys():
+			line[key] = line.get(key).replace('\"', "").strip()
 
 		hvf_obj = Hvf_Object(line, raw_plot, tdv_plot, pdv_plot, tdp_plot, pdp_plot, None);
 
@@ -280,7 +283,7 @@ class Hvf_Export:
 		for i in range(0, 100):
 			header_name = plot_name + str(i);
 
-			data_point = line.pop(header_name).strip();
+			data_point = line.pop(header_name).replace(" ", "");
 
 			if (data_point == ""):
 				# Empty strings cause issues - replace with space
@@ -332,6 +335,8 @@ class Hvf_Export:
 		for line in list_of_lines:
 
 			file_name = line.pop('file_name');
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Reading data for {}".format(file_name));
+
 
 			hvf_obj = Hvf_Export.get_hvf_object_from_line(line);
 

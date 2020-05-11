@@ -142,7 +142,10 @@ class Hvf_Value:
 		elif (num == Hvf_Value.VALUE_BELOW_THRESHOLD_CHAR):
 			num = Hvf_Value.VALUE_BELOW_THRESHOLD;
 		else:
-			num = int(num);
+			try:
+				num = int(num);
+			except:
+				num = Hvf_Value.VALUE_FAILURE
 
 		return Hvf_Value(num, None);
 

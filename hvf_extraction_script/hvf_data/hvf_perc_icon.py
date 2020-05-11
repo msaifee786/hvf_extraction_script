@@ -125,7 +125,10 @@ class Hvf_Perc_Icon:
 
 		reverse_disp_char_dict = {v: k for k, v in Hvf_Perc_Icon.perc_disp_char_dict.items()}
 
-		perc_enum = reverse_disp_char_dict[icon_char];
+		try:
+			perc_enum = reverse_disp_char_dict[icon_char];
+		except:
+			perc_enum = Hvf_Perc_Icon.PERC_FAILURE;
 
 		return Hvf_Perc_Icon(perc_enum, None);
 

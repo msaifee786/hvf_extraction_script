@@ -57,6 +57,8 @@ ap.add_argument("-i", "--image", required=False,
 ap.add_argument('-t', '--test', nargs='?', const=default_unit_test_dir)
 ap.add_argument("-a", "--add_test_case", required=False,
 	help="adds input hvf image to test cases")
+ap.add_argument("-s", "--test_serialized_data", required=False,
+	help="test serialized data")
 args = vars(ap.parse_args())
 
 
@@ -121,3 +123,52 @@ elif (args["test"]):
 		dir = dir + "/";
 
 	Hvf_Test.test_unit_tests(dir);
+
+###############################################################################
+# SERIALIZED DATA TESTING ###########################################################
+###############################################################################
+# If flag, then do unit tests:
+elif (args["test_serialized_data"]):
+
+	if (Logger.get_logger_level() > Logger.DEBUG_FLAG_BROADCAST):
+		Logger.get_logger().set_logger_level(Logger.DEBUG_FLAG_BROADCAST);
+
+	# Assume argument is the testing directory. Make sure its in format of directory
+
+	dir = os.path.join("hvf_serialized_tests", args["test_serialized_data"]);
+
+	reference_data_dir = os.path.join(dir, "reference_data");
+	test_data_dir = os.path.join(dir, "test_data");
+
+	testing_data_list = []
+
+	for hvf_text_file in os.listdir(reference_data_dir):
+
+		# Skip hidden files:
+		if hvf_text_file.startswith('.'):
+			continue;
+
+		# Then, find corresponding serialization text file
+		filename_root, ext = os.path.splitext(hvf_text_file);
+
+		# Load data into hvf_obj. Assume same file name
+		reference_file_path = os.path.join(reference_data_dir, hvf_text_file)
+		reference_data_text = File_Utils.read_text_from_file(reference_file_path);
+		reference_hvf_obj = Hvf_Object.get_hvf_object_from_text(reference_data_text);
+
+
+		test_file_path = os.path.join(test_data_dir, hvf_text_file)
+		test_data_text = File_Utils.read_text_from_file(test_file_path);
+		test_hvf_obj = Hvf_Object.get_hvf_object_from_text(test_data_text);
+
+		testing_data_dict, testing_msgs = Hvf_Test.test_hvf_obj(filename_root, reference_hvf_obj, test_hvf_obj)
+		testing_data_dict["time"] = 0;
+
+		# Print messages
+		for msg in testing_msgs:
+			Logger.get_logger().log_msg(debug_level, msg)
+
+
+		testing_data_list.append(testing_data_dict);
+
+	Hvf_Test.print_unit_test_aggregate_metrics(testing_data_list);

@@ -48,14 +48,14 @@ from hvf_extraction_script.hvf_manager.hvf_metric_calculator import Hvf_Metric_C
 class Hvf_Test:
 
 	# Unit test folders/names for images and serialization texts:
-	UNIT_TEST_MASTER_PATH = "hvf_test_cases/";
+	UNIT_TEST_MASTER_PATH = "hvf_test_cases";
 
-	UNIT_TEST_IMAGE_DIR = "image_plots/";
-	UNIT_TEST_SERIALIZATION_DIR = "serialized_plots/";
+	UNIT_TEST_IMAGE_DIR = "image_plots";
+	UNIT_TEST_SERIALIZATION_DIR = "serialized_plots";
 
 
 	###############################################################################
-	# HELPER FUNCTIONS  ###########################################################
+	# FILE MANAGEMENT HELPER FUNCTIONS  ###########################################
 	###############################################################################
 
 	# Helper for constructing image dir and serialization dir (for test cases)
@@ -74,6 +74,9 @@ class Hvf_Test:
 
 		return Hvf_Test.UNIT_TEST_MASTER_PATH + sub_dir;
 
+	###############################################################################
+	# TESTING HELPER FUNCTIONS  ###################################################
+	###############################################################################
 
 	# Helper function for comparing two plots - expected plot and actual plot
 	# Assumes 10x10 structure
@@ -148,230 +151,6 @@ class Hvf_Test:
 
 		# Return the results
 		return element_count;
-
-	###############################################################################
-	# SINGLE IMAGE TESTING ########################################################
-	###############################################################################
-	@staticmethod
-	def test_single_image(hvf_image):
-		# Load image
-
-		# Set up the logger module:
-		debug_level = Logger.DEBUG_FLAG_SYSTEM;
-		#debug_level = Logger.DEBUG_FLAG_DEBUG;
-		msg_logger = Logger.get_logger().set_logger_level(debug_level);
-
-		# Instantiate hvf object:
-		Logger.get_logger().log_time("Single HVF image extraction time", Logger.TIME_START)
-		hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image);
-
-		debug_level = Logger.DEBUG_FLAG_TIME;
-		msg_logger = Logger.get_logger().set_logger_level(debug_level);
-
-		Logger.get_logger().log_time("Single HVF image extraction time", Logger.TIME_END)
-
-		# Print the display strings:
-		print(hvf_obj.get_pretty_string());
-
-		# Get a serialization string of object:
-		serialization = hvf_obj.serialize_to_json();
-
-		# Print serialization:
-		print(serialization);
-
-
-		# Test to make sure serialization works:
-		hvf_obj2 = Hvf_Object.get_hvf_object_from_text(serialization);
-
-		serialization2 = hvf_obj2.serialize_to_json();
-
-
-		if (serialization == serialization2):
-			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Passed serialization/deserialization consistency");
-
-			# Check to see if we can release saved images without error:
-			hvf_obj.release_saved_image();
-			hvf_obj2.release_saved_image();
-			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Passed releasing saved images");
-		else:
-			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "FAILED serialization/deserialization consistency ==============");
-
-			print(serialization);
-			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "=====");
-			print(serialization2);
-
-			# Check to see if we can release saved images without error:
-			hvf_obj.release_saved_image();
-			hvf_obj2.release_saved_image();
-
-			#for line in difflib.unified_diff(serialization, serialization2, lineterm=''):
-			#	print(line);
-
-
-		# Test HVF Metric calculator:
-		Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Global CIGTS TDP Score: " + str(Hvf_Metric_Calculator.get_global_cigts_tdp_score(hvf_obj)));
-
-		if hvf_obj.pat_dev_percentile_array.is_pattern_not_generated():
-			pdp_cigts =  "Cannot calculate as pattern not generated"
-		else:
-			pdp_cigts =  str(Hvf_Metric_Calculator.get_global_cigts_pdp_score(hvf_obj))
-		Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Global CIGTS PDP Score: " + pdp_cigts);
-
-		# Need to have wait for window instantiation IF the code generates frames - it does
-		# when debugging. Comment for now
-		#cv2.waitKey(0);
-		cv2.destroyAllWindows();
-
-		return "";
-
-	###############################################################################
-	# BULK UNIT TESTING ###########################################################
-	###############################################################################
-
-
-	# Do unit tests of a specific directory
-	@staticmethod
-	def test_unit_tests(sub_dir):
-
-		# Set up the logger module:
-		debug_level = Logger.DEBUG_FLAG_SYSTEM;
-		msg_logger = Logger.get_logger().set_logger_level(debug_level);
-
-		# TODO: Error check to make sure that sub_dir exists
-		master_test_path = Hvf_Test.construct_master_test_dir(sub_dir);
-
-		if not os.path.isdir(master_test_path):
-			# This path does not exist!
-			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_ERROR, "Unit test directory \'" + sub_dir + "\' does not exist");
-			return "";
-
-
-		test_image_path = Hvf_Test.construct_image_dir(sub_dir);
-		serialization_path = Hvf_Test.construct_serialization_dir(sub_dir);
-
-		dict_of_times = {};
-		reference_hvf_obj_dict = {};
-		test_hvf_obj_dict = {};
-
-		Logger.get_logger().log_msg(debug_level, "================================================================================");
-		Logger.get_logger().log_msg(debug_level, "Starting HVF Image Extractions");
-
-
-		# For each image in the test folder:
-		for hvf_image_name in os.listdir(test_image_path):
-
-			# Skip hidden files:
-			if hvf_image_name.startswith('.'):
-				continue;
-
-			# Then, find corresponding serialization text file
-			filename_root, ext = os.path.splitext(hvf_image_name);
-
-			# Load image, convert to an hvf_obj
-			hvf_image = File_Utils.read_image_from_file(test_image_path + hvf_image_name)
-
-			Logger.get_logger().log_msg(debug_level, "Extracting HVF report image {}".format(hvf_image_name));
-
-			Logger.get_logger().log_time( "Test " + filename_root, Logger.TIME_START);
-			test_hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image);
-			time_elapsed = Logger.get_logger().log_time( "Test " + filename_root, Logger.TIME_END);
-
-
-			serialization_file_name = serialization_path + filename_root + ".txt";
-			serialization = File_Utils.read_text_from_file(serialization_file_name);
-			reference_hvf_obj = Hvf_Object.get_hvf_object_from_text(serialization);
-
-			dict_of_times[filename_root] = time_elapsed;
-			reference_hvf_obj_dict[filename_root] = reference_hvf_obj;
-			test_hvf_obj_dict[filename_root] = test_hvf_obj;
-
-		Hvf_Test.perform_hvf_obj_test_by_list(reference_hvf_obj_dict, test_hvf_obj_dict, dict_of_times)
-
-		return "";
-
-	# Do unit tests of two sets of hvf objects
-	@staticmethod
-	def perform_hvf_obj_test_by_list(reference_hvf_obj_dict, test_hvf_obj_dict, dict_of_times):
-
-		debug_level = Logger.DEBUG_FLAG_SYSTEM;
-
-		# Declare variable to keep track of times, errors, etc
-		# Will be a list of raw data --> we will calculate metrics at the end
-		testing_data_list = [];
-
-
-		# For each image in the test folder:
-		for test_name in reference_hvf_obj_dict.keys():
-
-			reference_hvf_obj = reference_hvf_obj_dict.get(test_name);
-			test_hvf_obj = test_hvf_obj_dict.get(test_name);
-
-			testing_data_dict, testing_msgs = Hvf_Test.test_hvf_obj(test_name, reference_hvf_obj, test_hvf_obj)
-
-			testing_data_dict["time"] = dict_of_times.get(test_name, 0);
-
-			# Print messages
-			for msg in testing_msgs:
-				Logger.get_logger().log_msg(debug_level, msg)
-
-
-			testing_data_list.append(testing_data_dict);
-
-		# Now, process our data:
-
-		# Things to evaluate/list:
-		# - Total number of tests
-		# - Average time to extract data
-		# - Number/percentage of metadata errors
-		# - Number/percentage of value plot errors
-		# - Number/percentage of percentile plot errors
-
-		Logger.get_logger().log_msg(debug_level, "================================================================================");
-		Logger.get_logger().log_msg(debug_level, "UNIT TEST AGGREGATE METRICS:")
-
-		num_tests = len(testing_data_list);
-
-		Logger.get_logger().log_msg(debug_level, "Total number of tests: " + str(num_tests))
-
-		list_of_times = list(map(lambda x: x["time"], testing_data_list));
-		average_time = round(sum(list_of_times)/len(list_of_times))
-
-		if (average_time > 0):
-			Logger.get_logger().log_msg(debug_level, "Average extraction time per report: " + str(average_time) + "ms")
-
-		Logger.get_logger().log_msg(debug_level, "")
-
-		metadata_total = sum(list(map(lambda x: x["metadata_vals"], testing_data_list)));
-		metadata_errors = sum(list(map(lambda x: len(x["metadata_errors"]), testing_data_list)));
-		metadata_error_percentage = round(metadata_errors/metadata_total, 3)
-
-		Logger.get_logger().log_msg(debug_level, "Total number of metadata fields: " + str(metadata_total))
-		Logger.get_logger().log_msg(debug_level, "Total number of metadata field errors: " + str(metadata_errors))
-		Logger.get_logger().log_msg(debug_level, "Metadata field error rate: " + str(metadata_error_percentage))
-
-		Logger.get_logger().log_msg(debug_level, "")
-
-		value_total = sum(list(map(lambda x: x["value_plot_vals"], testing_data_list)));
-		value_errors = sum(list(map(lambda x: x["value_plot_errors"], testing_data_list)));
-		value_error_percentage = round(value_errors/value_total, 3)
-
-		Logger.get_logger().log_msg(debug_level, "Total number of value data points: " + str(value_total))
-		Logger.get_logger().log_msg(debug_level, "Total number of value data point errors: " + str(value_errors))
-		Logger.get_logger().log_msg(debug_level, "Value data point error rate: " + str(value_error_percentage))
-
-		Logger.get_logger().log_msg(debug_level, "")
-
-		perc_total = sum(list(map(lambda x: x["perc_plot_vals"], testing_data_list)));
-		perc_errors = sum(list(map(lambda x: x["perc_plot_errors"], testing_data_list)));
-		perc_error_percentage = round(perc_errors/perc_total, 3)
-
-		Logger.get_logger().log_msg(debug_level, "Total number of percentile data points: " + str(perc_total))
-		Logger.get_logger().log_msg(debug_level, "Total number of percentile data point errors: " + str(perc_errors))
-		Logger.get_logger().log_msg(debug_level, "Percentile data point error rate: " + str(perc_error_percentage))
-
-
-		return "";
-
 
 
 	def test_hvf_obj(test_name, reference_hvf_obj, test_hvf_obj):
@@ -627,6 +406,213 @@ class Hvf_Test:
 
 
 
+	def print_unit_test_aggregate_metrics(testing_data_list):
+		debug_level = Logger.DEBUG_FLAG_SYSTEM;
+
+		# Things to evaluate/list:
+		# - Total number of tests
+		# - Average time to extract data
+		# - Number/percentage of metadata errors
+		# - Number/percentage of value plot errors
+		# - Number/percentage of percentile plot errors
+
+		Logger.get_logger().log_msg(debug_level, "================================================================================");
+		Logger.get_logger().log_msg(debug_level, "UNIT TEST AGGREGATE METRICS:")
+
+		num_tests = len(testing_data_list);
+
+		Logger.get_logger().log_msg(debug_level, "Total number of tests: " + str(num_tests))
+
+		list_of_times = list(map(lambda x: x["time"], testing_data_list));
+		average_time = round(sum(list_of_times)/len(list_of_times))
+
+		if (average_time > 0):
+			Logger.get_logger().log_msg(debug_level, "Average extraction time per report: " + str(average_time) + "ms")
+
+		Logger.get_logger().log_msg(debug_level, "")
+
+		metadata_total = sum(list(map(lambda x: x["metadata_vals"], testing_data_list)));
+		metadata_errors = sum(list(map(lambda x: len(x["metadata_errors"]), testing_data_list)));
+		metadata_error_percentage = round(metadata_errors/metadata_total, 3)
+
+		Logger.get_logger().log_msg(debug_level, "Total number of metadata fields: " + str(metadata_total))
+		Logger.get_logger().log_msg(debug_level, "Total number of metadata field errors: " + str(metadata_errors))
+		Logger.get_logger().log_msg(debug_level, "Metadata field error rate: " + str(metadata_error_percentage))
+
+		Logger.get_logger().log_msg(debug_level, "")
+
+		value_total = sum(list(map(lambda x: x["value_plot_vals"], testing_data_list)));
+		value_errors = sum(list(map(lambda x: x["value_plot_errors"], testing_data_list)));
+		value_error_percentage = round(value_errors/value_total, 3)
+
+		Logger.get_logger().log_msg(debug_level, "Total number of value data points: " + str(value_total))
+		Logger.get_logger().log_msg(debug_level, "Total number of value data point errors: " + str(value_errors))
+		Logger.get_logger().log_msg(debug_level, "Value data point error rate: " + str(value_error_percentage))
+
+		Logger.get_logger().log_msg(debug_level, "")
+
+		perc_total = sum(list(map(lambda x: x["perc_plot_vals"], testing_data_list)));
+		perc_errors = sum(list(map(lambda x: x["perc_plot_errors"], testing_data_list)));
+		perc_error_percentage = round(perc_errors/perc_total, 3)
+
+		Logger.get_logger().log_msg(debug_level, "Total number of percentile data points: " + str(perc_total))
+		Logger.get_logger().log_msg(debug_level, "Total number of percentile data point errors: " + str(perc_errors))
+		Logger.get_logger().log_msg(debug_level, "Percentile data point error rate: " + str(perc_error_percentage))
+
+
+		return "";
+
+	###############################################################################
+	# SINGLE IMAGE TESTING ########################################################
+	###############################################################################
+	@staticmethod
+	def test_single_image(hvf_image):
+		# Load image
+
+		# Set up the logger module:
+		debug_level = Logger.DEBUG_FLAG_SYSTEM;
+		#debug_level = Logger.DEBUG_FLAG_DEBUG;
+		msg_logger = Logger.get_logger().set_logger_level(debug_level);
+
+		# Instantiate hvf object:
+		Logger.get_logger().log_time("Single HVF image extraction time", Logger.TIME_START)
+		hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image);
+
+		debug_level = Logger.DEBUG_FLAG_TIME;
+		msg_logger = Logger.get_logger().set_logger_level(debug_level);
+
+		Logger.get_logger().log_time("Single HVF image extraction time", Logger.TIME_END)
+
+		# Print the display strings:
+		print(hvf_obj.get_pretty_string());
+
+		# Get a serialization string of object:
+		serialization = hvf_obj.serialize_to_json();
+
+		# Print serialization:
+		print(serialization);
+
+
+		# Test to make sure serialization works:
+		hvf_obj2 = Hvf_Object.get_hvf_object_from_text(serialization);
+
+		serialization2 = hvf_obj2.serialize_to_json();
+
+
+		if (serialization == serialization2):
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Passed serialization/deserialization consistency");
+
+			# Check to see if we can release saved images without error:
+			hvf_obj.release_saved_image();
+			hvf_obj2.release_saved_image();
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Passed releasing saved images");
+		else:
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "FAILED serialization/deserialization consistency ==============");
+
+			print(serialization);
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "=====");
+			print(serialization2);
+
+			# Check to see if we can release saved images without error:
+			hvf_obj.release_saved_image();
+			hvf_obj2.release_saved_image();
+
+			#for line in difflib.unified_diff(serialization, serialization2, lineterm=''):
+			#	print(line);
+
+
+		# Test HVF Metric calculator:
+		Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Global CIGTS TDP Score: " + str(Hvf_Metric_Calculator.get_global_cigts_tdp_score(hvf_obj)));
+
+		if hvf_obj.pat_dev_percentile_array.is_pattern_not_generated():
+			pdp_cigts =  "Cannot calculate as pattern not generated"
+		else:
+			pdp_cigts =  str(Hvf_Metric_Calculator.get_global_cigts_pdp_score(hvf_obj))
+		Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Global CIGTS PDP Score: " + pdp_cigts);
+
+		# Need to have wait for window instantiation IF the code generates frames - it does
+		# when debugging. Comment for now
+		#cv2.waitKey(0);
+		cv2.destroyAllWindows();
+
+		return "";
+
+
+
+	###############################################################################
+	# BULK UNIT TESTING ###########################################################
+	###############################################################################
+
+	# Do unit tests of a specific directory
+	@staticmethod
+	def test_unit_tests(sub_dir):
+
+		# Set up the logger module:
+		debug_level = Logger.DEBUG_FLAG_SYSTEM;
+		msg_logger = Logger.get_logger().set_logger_level(debug_level);
+
+		# TODO: Error check to make sure that sub_dir exists
+		master_test_path = os.path.join(Hvf_Test.UNIT_TEST_MASTER_PATH, sub_dir)
+		#master_test_path = Hvf_Test.construct_master_test_dir(sub_dir);
+
+		if not os.path.isdir(master_test_path):
+			# This path does not exist!
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_ERROR, "Unit test directory \'" + sub_dir + "\' does not exist");
+			return "";
+
+
+		test_image_path = os.path.join(master_test_path, Hvf_Test.UNIT_TEST_IMAGE_DIR)
+		serialization_path = os.path.join(master_test_path, Hvf_Test.UNIT_TEST_SERIALIZATION_DIR)
+
+		#test_image_path = Hvf_Test.construct_image_dir(sub_dir);
+		#serialization_path = Hvf_Test.construct_serialization_dir(sub_dir);
+
+		Logger.get_logger().log_msg(debug_level, "================================================================================");
+		Logger.get_logger().log_msg(debug_level, "Starting HVF Unit Tests: Image extraction vs reference");
+
+		# Declare variable to keep track of times, errors, etc
+		# Will be a list of raw data --> we will calculate metrics at the end
+		testing_data_list = [];
+
+		# For each image in the test folder:
+		for hvf_image_name in os.listdir(test_image_path):
+
+			# Skip hidden files:
+			if hvf_image_name.startswith('.'):
+				continue;
+
+			# Then, find corresponding serialization text file
+			filename_root, ext = os.path.splitext(hvf_image_name);
+
+			# Load image, convert to an hvf_obj
+			hvf_image_path = os.path.join(test_image_path, hvf_image_name)
+			hvf_image = File_Utils.read_image_from_file(hvf_image_path); #test_image_path + hvf_image_name)
+
+			Logger.get_logger().log_time( "Test " + filename_root, Logger.TIME_START);
+			test_hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image);
+			time_elapsed = Logger.get_logger().log_time( "Test " + filename_root, Logger.TIME_END);
+
+
+			serialization_file_path = os.path.join(serialization_path, filename_root + ".txt");
+			serialization = File_Utils.read_text_from_file(serialization_file_path);
+			reference_hvf_obj = Hvf_Object.get_hvf_object_from_text(serialization);
+
+
+			testing_data_dict, testing_msgs = Hvf_Test.test_hvf_obj(filename_root, reference_hvf_obj, test_hvf_obj)
+			testing_data_dict["time"] = time_elapsed;
+
+			# Print messages
+			for msg in testing_msgs:
+				Logger.get_logger().log_msg(debug_level, msg)
+
+
+			testing_data_list.append(testing_data_dict);
+
+		Hvf_Test.print_unit_test_aggregate_metrics(testing_data_list);
+
+		return "";
+
+
 	###############################################################################
 	# ADD NEW UNIT TESTS ##########################################################
 	###############################################################################
@@ -645,8 +631,9 @@ class Hvf_Test:
 
 		# Add the test cases to the test folders:
 
-		# First, check if we have this master directory or not
+		# First, check if we have this master directory (and image extraciton test directory) or not
 		master_test_path = Hvf_Test.construct_master_test_dir(test_path);
+
 
 		# Construct the target path for the test folders:
 		test_image_path = Hvf_Test.construct_image_dir(test_path);

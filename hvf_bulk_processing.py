@@ -199,6 +199,11 @@ elif (args["import_file"]):
 		hvf_obj = dict_of_hvf_objs.get(filename)
 
 		try:
+			filename_root, ext = os.path.splitext(filename);
+
+			if not (ext == "txt"):
+				filename = filename + ".txt";
+
 			file_path = os.path.join(save_dir, str(filename));
 
 			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Writing text serialization file " + filename);
