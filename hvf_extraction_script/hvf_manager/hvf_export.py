@@ -258,25 +258,25 @@ class Hvf_Export:
 
 		if (plot_type == Hvf_Plot_Array.PLOT_RAW):
 			plot_name = "raw";
-			plot_array = np.zeros((10, 10, 1), dtype=Hvf_Value);
+			plot_array = np.zeros((10, 10), dtype=Hvf_Value);
 
 		if (plot_type == Hvf_Plot_Array.PLOT_TOTAL_DEV):
 			if (icon_type == Hvf_Plot_Array.PLOT_VALUE):
 				plot_name = "tdv";
-				plot_array = np.zeros((10, 10, 1), dtype=Hvf_Value);
+				plot_array = np.zeros((10, 10), dtype=Hvf_Value);
 
 			if (icon_type == Hvf_Plot_Array.PLOT_PERC):
 				plot_name = "tdp";
-				plot_array = np.zeros((10, 10, 1), dtype=Hvf_Perc_Icon);
+				plot_array = np.zeros((10, 10), dtype=Hvf_Perc_Icon);
 
 		if (plot_type == Hvf_Plot_Array.PLOT_PATTERN_DEV):
 			if (icon_type == Hvf_Plot_Array.PLOT_VALUE):
 				plot_name = "pdv";
-				plot_array = np.zeros((10, 10, 1), dtype=Hvf_Value);
+				plot_array = np.zeros((10, 10), dtype=Hvf_Value);
 
 			if (icon_type == Hvf_Plot_Array.PLOT_PERC):
 				plot_name = "pdp"
-				plot_array = np.zeros((10, 10, 1), dtype=Hvf_Perc_Icon);
+				plot_array = np.zeros((10, 10), dtype=Hvf_Perc_Icon);
 
 
 		is_blank = True;

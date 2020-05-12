@@ -540,8 +540,17 @@ class Hvf_Object:
 		raw_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Value);
 		tdv_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Value);
 		tdp_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Perc_Icon);
-		pdv_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Value);
-		pdp_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Perc_Icon);
+
+
+		is_pattern_generated = dicom_ds.VisualFieldTestPointSequence[0].VisualFieldTestPointNormalsSequence[0].GeneralizedDefectCorrectedSensitivityDeviationFlag;
+
+		if (is_pattern_generated == "YES"):
+			pdv_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Value);
+			pdp_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Perc_Icon);
+		else:
+			pdv_array = Hvf_Plot_Array.NO_PATTERN_DETECT;
+			pdp_array = Hvf_Plot_Array.NO_PATTERN_DETECT;
+
 
 		DICOM_PERC_NORMAL = 0.0;
 		DICOM_PERC_5 = 5.0;
@@ -576,12 +585,15 @@ class Hvf_Object:
 			tdp_perc = datapoint.VisualFieldTestPointNormalsSequence[0].AgeCorrectedSensitivityDeviationProbabilityValue
 			tdp_array[r,c] = Hvf_Perc_Icon.get_perc_icon_from_char(perc_icon_dict[tdp_perc])
 
+			is_pattern_generated = datapoint.VisualFieldTestPointNormalsSequence[0].GeneralizedDefectCorrectedSensitivityDeviationFlag;
 
-			pdv_val = int(datapoint.VisualFieldTestPointNormalsSequence[0].GeneralizedDefectCorrectedSensitivityDeviationValue);
-			pdv_array[r,c] = Hvf_Value.get_value_from_display_string(str(pdv_val));
+			if (is_pattern_generated == "YES"):
+				pdv_val = int(datapoint.VisualFieldTestPointNormalsSequence[0].GeneralizedDefectCorrectedSensitivityDeviationValue);
+				pdv_array[r,c] = Hvf_Value.get_value_from_display_string(str(pdv_val));
 
-			pdp_perc = datapoint.VisualFieldTestPointNormalsSequence[0].GeneralizedDefectCorrectedSensitivityDeviationProbabilityValue
-			pdp_array[r,c] = Hvf_Perc_Icon.get_perc_icon_from_char(perc_icon_dict[pdp_perc])
+				pdp_perc = datapoint.VisualFieldTestPointNormalsSequence[0].GeneralizedDefectCorrectedSensitivityDeviationProbabilityValue
+				pdp_array[r,c] = Hvf_Perc_Icon.get_perc_icon_from_char(perc_icon_dict[pdp_perc])
+
 
 
 		for r in range(NUM_CELLS_ROW):
@@ -590,8 +602,9 @@ class Hvf_Object:
 					raw_array[r,c] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
 					tdv_array[r,c] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
 					tdp_array[r,c] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
-					pdv_array[r,c] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
-					pdp_array[r,c] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
+					if (is_pattern_generated == "YES"):
+						pdv_array[r,c] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
+						pdp_array[r,c] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
 
 		if (hvf_metadata.get(Hvf_Object.KEYLABEL_FIELD_SIZE) == Hvf_Object.HVF_24_2 or hvf_metadata.get(Hvf_Object.KEYLABEL_FIELD_SIZE) == Hvf_Object.HVF_30_2):
 			blind_spot_r = 4;
@@ -608,15 +621,12 @@ class Hvf_Object:
 			tdp_array[blind_spot_c, blind_spot_r] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
 			tdp_array[blind_spot_c, blind_spot_r+1] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
 
-			pdv_array[blind_spot_c, blind_spot_r] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
-			pdv_array[blind_spot_c, blind_spot_r+1] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
+			if (is_pattern_generated == "YES"):
+				pdv_array[blind_spot_c, blind_spot_r] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
+				pdv_array[blind_spot_c, blind_spot_r+1] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
 
-			pdp_array[blind_spot_c, blind_spot_r] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
-			pdp_array[blind_spot_c, blind_spot_r+1] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
-
-
-
-		# TODO: Clear blind spot
+				pdp_array[blind_spot_c, blind_spot_r] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
+				pdp_array[blind_spot_c, blind_spot_r+1] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
 
 
 		raw_array_plot = Hvf_Plot_Array.get_plot_from_array(Hvf_Plot_Array.PLOT_RAW, Hvf_Plot_Array.PLOT_VALUE, raw_array);
