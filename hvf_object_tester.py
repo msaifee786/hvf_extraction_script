@@ -21,6 +21,11 @@
 #		  Usage:
 #		  python hvf_object_tester -a <hvf_image_path> [-t <collection>]
 #
+#		- Runs unit test between two serialized HVF objects in the directory
+#		  hvf_serialized_tests
+#		  Usage:
+#		  python hvf_object_tester -s <hvf_image_path>
+#
 #
 #
 ###############################################################################
