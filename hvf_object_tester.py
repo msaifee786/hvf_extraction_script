@@ -54,6 +54,8 @@ default_unit_test_dir = "default"
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--image", required=False,
 	help="path to input HVF image file to test")
+ap.add_argument("-d", "--dicom", required=False,
+	help="path to input DICOM file to test")
 ap.add_argument('-t', '--test', nargs='?', const=default_unit_test_dir)
 ap.add_argument("-a", "--add_test_case", required=False,
 	help="adds input hvf image to test cases")
@@ -78,6 +80,16 @@ if (args["image"]):
 
 	hvf_image = File_Utils.read_image_from_file(args["image"]);
 	Hvf_Test.test_single_image(hvf_image);
+
+
+###############################################################################
+# DICOM FILE TESTING ##########################################################
+###############################################################################
+if (args["dicom"]):
+
+	hvf_dicom = File_Utils.read_dicom_from_file(args["dicom"]);
+	hvf_obj = Hvf_Object.get_hvf_object_from_dicom(hvf_dicom);
+	print(hvf_obj.get_pretty_string());
 
 
 ###############################################################################

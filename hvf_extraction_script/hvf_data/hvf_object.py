@@ -45,6 +45,9 @@ from functools import reduce
 # Import JSON to serialization
 import json
 
+# Import DICOM package
+import pydicom
+
 # Import regular expression packages
 import re
 import regex
@@ -167,6 +170,7 @@ class Hvf_Object:
 
 	###############################################################################
 	# Layout versions:
+	HVF_LAYOUT_DICOM = "dicom"
 	HVF_LAYOUT_V1 = "v1";
 	HVF_LAYOUT_V2 = "v2";
 	HVF_LAYOUT_V3 = "v3";
@@ -350,6 +354,282 @@ class Hvf_Object:
 		hvf_obj = Hvf_Object(hvf_dict, raw_val_plot, total_dev_val_plot, pat_dev_val_plot, total_dev_perc_plot, pat_dev_perc_plot, None)
 
 		return hvf_obj;
+
+
+	###############################################################################
+	# Factory method - get new object from DICOM file
+	# This is the method to call to generate a new object from a DICOM OPV file
+	# (file containing HVF perimetry data)
+	# Takes in a pydicom dataset object
+	@classmethod
+	def get_hvf_object_from_dicom(cls, dicom_ds):
+
+
+		# First, extract metadata:
+		hvf_metadata = {}
+
+		# ===== NAME/ID =====
+		# Name written usually as LAST^FIRST, so need to convert it
+		field = str(dicom_ds.PatientName);
+		field = field.replace("^", ", ")
+		hvf_metadata[Hvf_Object.KEYLABEL_NAME] = field;
+
+		hvf_metadata[Hvf_Object.KEYLABEL_ID] = str(dicom_ds.PatientID);
+
+		# ===== DOB =====
+		# Dates written as YYYYMMDD, so convert it to a readable format
+		# MM-DD-YYYY
+		field = str(dicom_ds.PatientBirthDate);
+		field = "{}-{}-{}".format(field[4:6], field[6:8], field[0:4])
+		hvf_metadata[Hvf_Object.KEYLABEL_DOB] = field;
+
+		# ===== TEST DATE =====
+		# Dates written as YYYYMMDD, so convert it to a readable format
+		# MM-DD-YYYY
+		field = str(dicom_ds.StudyDate);
+		field = "{}-{}-{}".format(field[4:6], field[6:8], field[0:4])
+		hvf_metadata[Hvf_Object.KEYLABEL_TEST_DATE] = field;
+
+		# ===== LATERALITY =====
+		field = str(dicom_ds.Laterality)
+		if (field == "R"):
+			field = Hvf_Object.HVF_OD;
+		else:
+			field = Hvf_Object.HVF_OS;
+
+		hvf_metadata[Hvf_Object.KEYLABEL_LATERALITY] = field;
+
+		# ===== FOVEA =====
+		field = str(dicom_ds.FovealSensitivityMeasured)
+
+		if (field == "YES"):
+			field = float(str(dicom_ds.FovealSensitivity));
+			field = str(int(field))
+			hvf_metadata[Hvf_Object.KEYLABEL_FOVEA] = field;
+		else:
+			hvf_metadata[Hvf_Object.KEYLABEL_FOVEA] = "OFF"
+
+		# ===== RELIABILITY INDICES =====
+		fl_numerator = str(dicom_ds.FixationSequence[0].PatientNotProperlyFixatedQuantity);
+		fl_denominator = str(dicom_ds.FixationSequence[0].FixationCheckedQuantity);
+		hvf_metadata[Hvf_Object.KEYLABEL_FIXATION_LOSS] = fl_numerator + "/" + fl_denominator;
+
+		fp = float(str(dicom_ds.VisualFieldCatchTrialSequence[0].FalsePositivesEstimate));
+		fp = str(int(fp)) + "%"
+		hvf_metadata[Hvf_Object.KEYLABEL_FALSE_POS] = fp;
+
+		fn = float(str(dicom_ds.VisualFieldCatchTrialSequence[0].FalseNegativesEstimate));
+		fn = str(int(fn)) + "%"
+		hvf_metadata[Hvf_Object.KEYLABEL_FALSE_NEG] = fn;
+
+		# ===== FIELD SIZE =====
+		field = str(dicom_ds.VisualFieldHorizontalExtent)
+
+		list_of_size = [Hvf_Object.HVF_10_2, Hvf_Object.HVF_24_2, Hvf_Object.HVF_30_2];
+		best_match = Regex_Utils.REGEX_FAILURE;
+		best_score = 0;
+		for size in list_of_size:
+			score = fuzz.partial_ratio(field, size);
+
+			if (score > best_score):
+				best_match = size;
+				best_score = score
+
+		hvf_metadata[Hvf_Object.KEYLABEL_FIELD_SIZE] = best_match;
+
+		# ===== STRATEGY =====
+		field = str(dicom_ds.PerformedProtocolCodeSequence[1].CodeMeaning)
+
+		list_of_strategies = [Hvf_Object.HVF_FULL_THRESHOLD, Hvf_Object.HVF_SITA_STANDARD, Hvf_Object.HVF_SITA_FAST]
+		best_match = Regex_Utils.REGEX_FAILURE;
+		best_score = 0;
+
+		for strategy in list_of_strategies:
+			score = fuzz.partial_ratio(strategy, field);
+
+			if (score > best_score):
+				best_match = strategy;
+				best_score = score;
+
+		hvf_metadata[Hvf_Object.KEYLABEL_STRATEGY] = best_match;
+
+		# ===== TEST DURATION =====
+		field = str(dicom_ds.VisualFieldTestDuration);
+
+		field = float(field);
+
+		min = str(int(field/60));
+		sec = str(int(field % 60));
+
+		if (len(min) == 1):
+			min = "0" + min;
+
+		if (len(sec) == 1):
+			sec = "0" + sec;
+
+		hvf_metadata[Hvf_Object.KEYLABEL_TEST_DURATION] = min + ":" + sec
+
+		# ===== PUPIL DIAMETER, RX =====
+		if (hvf_metadata[Hvf_Object.KEYLABEL_LATERALITY] == Hvf_Object.HVF_OD):
+			pupil_size = str(dicom_ds.OphthalmicPatientClinicalInformationRightEyeSequence[0].PupilSize);
+			sphere = str(dicom_ds.OphthalmicPatientClinicalInformationRightEyeSequence[0].RefractiveParametersUsedOnPatientSequence[0].SphericalLensPower)
+			cylinder = str(dicom_ds.OphthalmicPatientClinicalInformationRightEyeSequence[0].RefractiveParametersUsedOnPatientSequence[0].CylinderLensPower)
+			axis = str(dicom_ds.OphthalmicPatientClinicalInformationRightEyeSequence[0].RefractiveParametersUsedOnPatientSequence[0].CylinderAxis)
+
+		else:
+			pupil_size = str(dicom_ds.OphthalmicPatientClinicalInformationLeftEyeSequence[0].PupilSize);
+			sphere = str(dicom_ds.OphthalmicPatientClinicalInformationLeftEyeSequence[0].RefractiveParametersUsedOnPatientSequence[0].SphericalLensPower)
+			cylinder = str(dicom_ds.OphthalmicPatientClinicalInformationLeftEyeSequence[0].RefractiveParametersUsedOnPatientSequence[0].CylinderLensPower)
+			axis = str(dicom_ds.OphthalmicPatientClinicalInformationLeftEyeSequence[0].RefractiveParametersUsedOnPatientSequence[0].CylinderAxis)
+
+		hvf_metadata[Hvf_Object.KEYLABEL_PUPIL_DIAMETER] = pupil_size;
+
+		sphere = '{0:.2f}'.format(float(sphere))
+		cylinder = '{0:.2f}'.format(float(cylinder))
+		axis = str(int(float(axis)));
+
+		if (float(sphere) > 0):
+			sphere = "+" + str(sphere);
+
+		if not (cylinder == "0.00"):
+			rx = "{}DS +{}DC X {}".format(sphere, cylinder, axis)
+		elif not (sphere == "0.00"):
+			rx = "{}DS".format(sphere);
+		else:
+			rx = ""
+
+		hvf_metadata[Hvf_Object.KEYLABEL_RX] = rx;
+
+
+		# ===== MD/PSD/VFI DETECTION =====
+		md = str(dicom_ds.ResultsNormalsSequence[0].GlobalDeviationFromNormal);
+		md = "{:0.2f}".format(float(md));
+		hvf_metadata[Hvf_Object.KEYLABEL_MD] = md;
+
+
+		psd = str(dicom_ds.ResultsNormalsSequence[0].LocalizedDeviationFromNormal);
+		psd = "{:0.2f}".format(float(psd));
+		hvf_metadata[Hvf_Object.KEYLABEL_PSD] = psd;
+
+		try:
+			vfi = str(dicom_ds.VisualFieldGlobalResultsIndexSequence[0].DataObservationSequence[0].NumericValue);
+			vfi = "{:0.0f}%".format(int(vfi));
+			hvf_metadata[Hvf_Object.KEYLABEL_VFI] = vfi;
+		except:
+			hvf_metadata[Hvf_Object.KEYLABEL_VFI] = "";
+
+		hvf_metadata[Hvf_Object.KEYLABEL_LAYOUT] = Hvf_Object.HVF_LAYOUT_DICOM
+
+		# Now, extract plot data. Data is listed by degrees of VF, so have to
+		# calculate out plot index from it
+		# 24-2 and 30-2 - 6 degrees apart, centered around 3/-3. Starting edge is -27.
+		# 10-2 - 2 degrees apart, centered around 1/-1. Starting edge is -9
+		starting_degree = 0;
+		step_size = 0;
+
+		if (hvf_metadata.get(Hvf_Object.KEYLABEL_FIELD_SIZE) == Hvf_Object.HVF_10_2):
+			starting_degree = -9;
+			step_size = 2;
+		else:
+			starting_degree = -27;
+			step_size = 6;
+
+		NUM_CELLS_COL = 10;
+		NUM_CELLS_ROW = 10;
+
+		raw_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Value);
+		tdv_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Value);
+		tdp_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Perc_Icon);
+		pdv_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Value);
+		pdp_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Perc_Icon);
+
+		DICOM_PERC_NORMAL = 0.0;
+		DICOM_PERC_5 = 5.0;
+		DICOM_PERC_2 = 2.0;
+		DICOM_PERC_1 = 1.0;
+		DICOM_PERC_HALF = 0.5;
+
+		perc_icon_dict = {
+		  DICOM_PERC_NORMAL: Hvf_Perc_Icon.PERC_NORMAL_CHAR,
+		  DICOM_PERC_5: Hvf_Perc_Icon.PERC_5_PERCENTILE_CHAR,
+		  DICOM_PERC_2: Hvf_Perc_Icon.PERC_2_PERCENTILE_CHAR,
+		  DICOM_PERC_1: Hvf_Perc_Icon.PERC_1_PERCENTILE_CHAR,
+		  DICOM_PERC_HALF: Hvf_Perc_Icon.PERC_HALF_PERCENTILE_CHAR,
+		};
+
+		# Iterate through the plot data (all values are stored in same list/DICOM sequence):
+		for datapoint in dicom_ds.VisualFieldTestPointSequence:
+			r = int((datapoint.VisualFieldTestPointXCoordinate - starting_degree)/step_size)
+			c = int((-datapoint.VisualFieldTestPointYCoordinate - starting_degree)/step_size)
+
+			raw_val = int(datapoint.SensitivityValue);
+			if (datapoint.StimulusResults == "NOT SEEN"):
+				raw_array[r,c] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_BELOW_THRESHOLD_CHAR);
+
+			else:
+				raw_array[r,c] = Hvf_Value.get_value_from_display_string(str(raw_val));
+
+
+			tdv_val = int(datapoint.VisualFieldTestPointNormalsSequence[0].AgeCorrectedSensitivityDeviationValue);
+			tdv_array[r,c] = Hvf_Value.get_value_from_display_string(str(tdv_val));
+
+			tdp_perc = datapoint.VisualFieldTestPointNormalsSequence[0].AgeCorrectedSensitivityDeviationProbabilityValue
+			tdp_array[r,c] = Hvf_Perc_Icon.get_perc_icon_from_char(perc_icon_dict[tdp_perc])
+
+
+			pdv_val = int(datapoint.VisualFieldTestPointNormalsSequence[0].GeneralizedDefectCorrectedSensitivityDeviationValue);
+			pdv_array[r,c] = Hvf_Value.get_value_from_display_string(str(pdv_val));
+
+			pdp_perc = datapoint.VisualFieldTestPointNormalsSequence[0].GeneralizedDefectCorrectedSensitivityDeviationProbabilityValue
+			pdp_array[r,c] = Hvf_Perc_Icon.get_perc_icon_from_char(perc_icon_dict[pdp_perc])
+
+
+		for r in range(NUM_CELLS_ROW):
+			for c in range(NUM_CELLS_COL):
+				if (raw_array[r,c] == 0):
+					raw_array[r,c] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
+					tdv_array[r,c] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
+					tdp_array[r,c] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
+					pdv_array[r,c] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
+					pdp_array[r,c] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
+
+		if (hvf_metadata.get(Hvf_Object.KEYLABEL_FIELD_SIZE) == Hvf_Object.HVF_24_2 or hvf_metadata.get(Hvf_Object.KEYLABEL_FIELD_SIZE) == Hvf_Object.HVF_30_2):
+			blind_spot_r = 4;
+			blind_spot_c = 0;
+
+			if (hvf_metadata.get(Hvf_Object.KEYLABEL_LATERALITY) == Hvf_Object.HVF_OD):
+				blind_spot_c = 7;
+			else:
+				blind_spot_c = 2;
+
+			tdv_array[blind_spot_c, blind_spot_r] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
+			tdv_array[blind_spot_c, blind_spot_r+1] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
+
+			tdp_array[blind_spot_c, blind_spot_r] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
+			tdp_array[blind_spot_c, blind_spot_r+1] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
+
+			pdv_array[blind_spot_c, blind_spot_r] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
+			pdv_array[blind_spot_c, blind_spot_r+1] = Hvf_Value.get_value_from_display_string(Hvf_Value.VALUE_NO_VALUE);
+
+			pdp_array[blind_spot_c, blind_spot_r] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
+			pdp_array[blind_spot_c, blind_spot_r+1] = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_NO_VALUE_CHAR);
+
+
+
+		# TODO: Clear blind spot
+
+
+		raw_array_plot = Hvf_Plot_Array.get_plot_from_array(Hvf_Plot_Array.PLOT_RAW, Hvf_Plot_Array.PLOT_VALUE, raw_array);
+		tdv_array_plot = Hvf_Plot_Array.get_plot_from_array(Hvf_Plot_Array.PLOT_TOTAL_DEV, Hvf_Plot_Array.PLOT_VALUE, tdv_array);
+		tdp_array_plot = Hvf_Plot_Array.get_plot_from_array(Hvf_Plot_Array.PLOT_TOTAL_DEV, Hvf_Plot_Array.PLOT_PERC, tdp_array);
+		pdv_array_plot = Hvf_Plot_Array.get_plot_from_array(Hvf_Plot_Array.PLOT_PATTERN_DEV, Hvf_Plot_Array.PLOT_VALUE, pdv_array);
+		pdp_array_plot = Hvf_Plot_Array.get_plot_from_array(Hvf_Plot_Array.PLOT_PATTERN_DEV, Hvf_Plot_Array.PLOT_PERC, pdp_array);
+
+
+		hvf_obj = Hvf_Object(hvf_metadata, raw_array_plot, tdv_array_plot, pdv_array_plot, tdp_array_plot, pdp_array_plot, None)
+
+		return hvf_obj;
+
 
 
 	###############################################################################
@@ -541,7 +821,7 @@ class Hvf_Object:
 	@staticmethod
 	def get_value_plot_from_row_strings(value_plot_by_row):
 
-		ret_plot = np.zeros((10, 10, 1), dtype=Hvf_Value);
+		ret_plot = np.zeros((10, 10), dtype=Hvf_Value);
 
 		for ii in range(0, len(value_plot_by_row)):
 			row_string = value_plot_by_row[ii];
@@ -565,7 +845,7 @@ class Hvf_Object:
 	def get_perc_plot_from_row_strings(perc_plot_by_row):
 
 		# Absolute percentile plot:
-		ret_plot = np.zeros((10, 10, 1), dtype=Hvf_Perc_Icon);
+		ret_plot = np.zeros((10, 10), dtype=Hvf_Perc_Icon);
 
 		for ii in range(0, len(perc_plot_by_row)):
 			row_string = perc_plot_by_row[ii];
@@ -928,23 +1208,14 @@ class Hvf_Object:
 
 				# Construct our final field. To standardize formatting/minimize
 				# extra spaces, construct as an array and join:
-
-				rx_array = [];
-
-				if (sphere):
-					rx_array.append(sphere);
-
-				rx_array.append("DS");
 				if (cyl):
-					rx_array.append(cyl);
+					rx = "{}DS +{}DC X {}".format(sphere, cyl, axis)
+				elif (sphere):
+					rx = "{}DS".format(sphere);
+				else:
+					rx = ""
 
-				rx_array.append("DC");
-				rx_array.append("X");
-
-				if (axis):
-						rx_array.append(axis);
-
-				field = " ".join(rx_array);
+				field = rx;
 
 			except:
 				Logger.get_logger().log_msg(Logger.DEBUG_FLAG_WARNING, "Unable to extract Rx data");
@@ -1071,7 +1342,7 @@ class Hvf_Object:
 		for c in range(0, 10):
 			for r in range(0, 10):
 
-				val = np.asscalar(val_plot.get_plot_array()[c, r]);
+				val = val_plot.get_plot_array()[c, r];
 
 				boolean = boolean_mask_plot[r][abs(c-laterality_conversion)];
 

@@ -186,7 +186,7 @@ class Hvf_Metric_Calculator:
 			for x in range(0, np.size(perc_array, 1)):
 
 				# Grab the icon:
-				element = np.asscalar(perc_array[x, y]).get_enum()
+				element = perc_array[x, y].get_enum()
 
 				# Move on if element is not a true icon, or if its normal
 				if ((element == Hvf_Perc_Icon.PERC_NORMAL) or not (element in Hvf_Metric_Calculator.CIGTS_ICON_SCORE.keys())):
@@ -211,7 +211,7 @@ class Hvf_Metric_Calculator:
 							continue;
 
 						# Get adjacent element enum:
-						adj_element_enum = np.asscalar(perc_array[ii, jj]).get_enum()
+						adj_element_enum = perc_array[ii, jj].get_enum()
 
 						# Move on if adjacent icon is not a true icon:
 						if not (adj_element_enum in Hvf_Metric_Calculator.CIGTS_ICON_SCORE.keys()):
@@ -248,7 +248,7 @@ class Hvf_Metric_Calculator:
 		# 	line_string = "";
 		# 	for x in range(0, np.size(cigts_score_array, 1)):
 		#
-		# 		element = int(np.asscalar(cigts_score_array[x, y]))
+		# 		element = int(cigts_score_array[x, y])
 		#
 		# 		if (element == 0):
 		# 			element = "  ";

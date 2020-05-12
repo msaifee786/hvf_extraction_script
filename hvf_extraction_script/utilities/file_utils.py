@@ -11,8 +11,7 @@ import sys
 import os
 import cv2
 from shutil import copyfile
-
-# Import some helper packages:
+import pydicom
 
 class File_Utils:
 	###############################################################################
@@ -80,6 +79,12 @@ class File_Utils:
 
         return cv2.imread(file_path);
 
+    ###############################################################################
+    # Given file path, reads DICOM object from file
+    @staticmethod
+    def read_dicom_from_file(file_path):
+
+        return pydicom.dcmread(file_path);
 
     ###############################################################################
     # Given directory path, reads cv2 images from all files within the directory

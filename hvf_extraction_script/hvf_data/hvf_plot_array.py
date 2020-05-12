@@ -265,7 +265,7 @@ class Hvf_Plot_Array:
 			for r in range(0, np.size(self.plot_array, 0)):
 				for c in range (0, np.size(self.plot_array, 1)):
 
-					np.asscalar(self.plot_array[r][c]).release_saved_image();
+					self.plot_array[r][c].release_saved_image();
 
 		return;
 
@@ -767,10 +767,10 @@ class Hvf_Plot_Array:
 		plot_values_array = 0;
 
 		if (icon_type == Hvf_Plot_Array.PLOT_PERC):
-			plot_values_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW, 1), dtype=Hvf_Perc_Icon);
+			plot_values_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Perc_Icon);
 
 		elif (icon_type == Hvf_Plot_Array.PLOT_VALUE):
-			plot_values_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW, 1), dtype=Hvf_Value);
+			plot_values_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Value);
 
 		# We can also eliminate the grid axes/lines because we don't need them anymore, and
 		# they will make the image detection harder
@@ -933,10 +933,10 @@ class Hvf_Plot_Array:
 		string_array = "";
 
 		if (icon_type == Hvf_Plot_Array.PLOT_VALUE):
-			row_array = map((lambda x: np.asscalar(x).get_standard_size_display_string()), row_array)
+			row_array = map((lambda x: x.get_standard_size_display_string()), row_array)
 
 		elif (icon_type == Hvf_Plot_Array.PLOT_PERC):
-			row_array = map((lambda x: np.asscalar(x).get_display_string()), row_array)
+			row_array = map((lambda x: x.get_display_string()), row_array)
 
 		ret_string = delimiter.join(row_array)
 

@@ -93,16 +93,16 @@ class Hvf_Test:
 		for c in range(10):
 			for r in range(10):
 
-				val = np.asscalar(actual.get_plot_array()[c, r]);
-				exp_val = np.asscalar(expected.get_plot_array()[c, r]);
+				val = actual.get_plot_array()[c, r];
+				exp_val = expected.get_plot_array()[c, r];
 				# Check for equality:
 				if not(val.is_equal(exp_val)):
 
 					# Failed - increase count, add to string
 					fail_count = fail_count+1;
 
-					exp_val_str = "";
-					val_str = "";
+					exp_val_str = exp_val.get_display_string();
+					val_str = val.get_display_string();
 
 					string = "--> Element (" + str(c) + ", " + str(r) + ") - expected " + exp_val.get_display_string() + ", actual " + val.get_display_string();
 					fail_string_list.append(string);
@@ -126,7 +126,7 @@ class Hvf_Test:
 		for c in range(10):
 			for r in range(10):
 
-				if not (np.asscalar(plot.get_plot_array()[c, r]).get_value() == Hvf_Value.VALUE_NO_VALUE):
+				if not (plot.get_plot_array()[c, r].get_value() == Hvf_Value.VALUE_NO_VALUE):
 					element_count = element_count+1
 
 		# Return the results
@@ -146,7 +146,7 @@ class Hvf_Test:
 		for c in range(10):
 			for r in range(10):
 
-				if not (np.asscalar(plot.get_plot_array()[c, r]).get_enum() == Hvf_Perc_Icon.PERC_NO_VALUE):
+				if not (plot.get_plot_array()[c, r].get_enum() == Hvf_Perc_Icon.PERC_NO_VALUE):
 					element_count = element_count+1
 
 		# Return the results

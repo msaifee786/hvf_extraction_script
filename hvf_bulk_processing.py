@@ -55,6 +55,8 @@ ap.add_argument("-s", "--save_images", required=False,
 	help="path to directory of image files to read and save as text documents")
 ap.add_argument("-f", "--import_file", required=False,
 	help="path to TSV file to import and save as text documents")
+ap.add_argument("-d", "--dicom_file", required=False,
+	help="path to directory of DICOM files to convert to text documents")
 args = vars(ap.parse_args())
 
 
@@ -211,6 +213,39 @@ elif (args["import_file"]):
 
 		except:
 			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "============= FAILURE on serializing " + filename);
+
+elif (args["dicom_file"]):
+
+	directory = args["dicom_file"];
+
+	save_dir = "serialized_hvfs"
+
+	if not os.path.isdir(save_dir):
+		Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Making new save directory: " + save_dir);
+
+		os.mkdir(save_dir);
+
+	list_of_file_extensions = [".dcm"];
+	list_of_paths = File_Utils.get_files_within_dir(directory, list_of_file_extensions);
+
+	for hvf_dcm_path in list_of_paths:
+
+		path, filename = os.path.split(hvf_dcm_path)
+		Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Reading HVF DICOM " + filename);
+		hvf_dicom_ds = File_Utils.read_dicom_from_file(hvf_dcm_path);
+
+		try:
+			hvf_obj = Hvf_Object.get_hvf_object_from_dicom(hvf_dicom_ds);
+
+			file_path = os.path.join(save_dir, str(filename)+".txt");
+
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Writing text serialization file " + filename);
+			File_Utils.write_string_to_file(hvf_obj.serialize_to_json(), file_path)
+
+		except:
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "============= FAILURE on serializing " + filename);
+
+
 
 else:
 	Logger.get_logger().log_msg(Logger.DEBUG_FLAG_ERROR, "No input directory given");
