@@ -419,7 +419,10 @@ class Hvf_Object:
 		hvf_metadata[Hvf_Object.KEYLABEL_FALSE_POS] = fp;
 
 		fn = float(str(dicom_ds.VisualFieldCatchTrialSequence[0].FalseNegativesEstimate));
-		fn = str(int(fn)) + "%"
+		if (fn == -100.0):
+			fn = "N/A"
+		else:
+			fn = str(int(fn)) + "%"
 		hvf_metadata[Hvf_Object.KEYLABEL_FALSE_NEG] = fn;
 
 		# ===== FIELD SIZE =====
@@ -1090,6 +1093,7 @@ class Hvf_Object:
 				try:
 					field = output.group(1);
 					field = Regex_Utils.remove_spaces(field);
+					field = Regex_Utils.remove_non_numeric(field, []);
 				except:
 					Logger.get_logger().log_msg(Logger.DEBUG_FLAG_WARNING, "Unable to extract fovea value");
 
@@ -1219,7 +1223,7 @@ class Hvf_Object:
 				# Construct our final field. To standardize formatting/minimize
 				# extra spaces, construct as an array and join:
 				if (cyl):
-					rx = "{}DS +{}DC X {}".format(sphere, cyl, axis)
+					rx = "{}DS {}DC X {}".format(sphere, cyl, axis)
 				elif (sphere):
 					rx = "{}DS".format(sphere);
 				else:

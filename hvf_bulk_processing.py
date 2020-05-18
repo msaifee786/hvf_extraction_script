@@ -114,7 +114,7 @@ def get_dict_of_hvf_objs_from_text(directory):
 
 
 ###############################################################################
-# BULK UNIT TESTING ###########################################################
+# BULK PROCESSING #############################################################
 ###############################################################################
 
 Logger.set_logger_level(Logger.DEBUG_FLAG_SYSTEM);
@@ -193,12 +193,11 @@ elif (args["import_file"]):
 		os.mkdir(save_dir);
 
 	tsv_file_string = File_Utils.read_text_from_file(path_to_tsv_file);
-
-
 	dict_of_hvf_objs = Hvf_Export.import_hvf_list_from_spreadsheet(tsv_file_string);
 
 	for filename in dict_of_hvf_objs.keys():
 		hvf_obj = dict_of_hvf_objs.get(filename)
+		hvf_serialized = hvf_obj.serialize_to_json()
 
 		try:
 			filename_root, ext = os.path.splitext(filename);
@@ -209,7 +208,7 @@ elif (args["import_file"]):
 			file_path = os.path.join(save_dir, str(filename));
 
 			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Writing text serialization file " + filename);
-			File_Utils.write_string_to_file(hvf_obj.serialize_to_json(), file_path)
+			File_Utils.write_string_to_file(hvf_serialized, file_path)
 
 		except:
 			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "============= FAILURE on serializing " + filename);
@@ -240,6 +239,7 @@ elif (args["dicom_file"]):
 			file_path = os.path.join(save_dir, str(filename)+".txt");
 
 			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Writing text serialization file " + filename);
+
 			File_Utils.write_string_to_file(hvf_obj.serialize_to_json(), file_path)
 
 		except:

@@ -27,6 +27,7 @@ import difflib;
 from shutil import copyfile
 import os
 import numpy as np
+from datetime import datetime
 
 # Import logger class to handle any messages:
 from hvf_extraction_script.utilities.logger import Logger;
@@ -47,8 +48,18 @@ from hvf_extraction_script.hvf_manager.hvf_metric_calculator import Hvf_Metric_C
 
 class Hvf_Test:
 
-	# Unit test folders/names for images and serialization texts:
+	# Unit test folders/names:
 	UNIT_TEST_MASTER_PATH = "hvf_test_cases";
+
+
+	UNIT_TEST_IMAGE_VS_SERIALIZATION = "image_vs_serialization";
+	UNIT_TEST_IMAGE_VS_DICOM = "image_vs_dicom";
+	UNIT_TEST_SERIALIZATION_VS_DICOM = "serialization_vs_dicom";
+	UNIT_TEST_SERIALIZATION_VS_SERIALIZATION = "serialization_vs_serialization";
+
+	UNIT_TEST_REFERENCE_DIR = "reference_data"
+	UNIT_TEST_TEST_DIR = "test_data"
+
 
 	UNIT_TEST_IMAGE_DIR = "image_plots";
 	UNIT_TEST_SERIALIZATION_DIR = "serialized_plots";
@@ -152,6 +163,230 @@ class Hvf_Test:
 		# Return the results
 		return element_count;
 
+	@staticmethod
+	def compare_metadata_dicts(test_name, test_metadata, ref_metadata):
+
+		num_metadata_fields = 0;
+		metadata_errors = []
+		metadata_fail_str_list = [];
+
+		key_to_func_dict = {
+			Hvf_Object.KEYLABEL_NAME: Hvf_Test.compare_names,
+			Hvf_Object.KEYLABEL_DOB: Hvf_Test.compare_dates,
+			Hvf_Object.KEYLABEL_ID: Hvf_Test.compare_ids,
+			Hvf_Object.KEYLABEL_TEST_DATE: Hvf_Test.compare_dates,
+			Hvf_Object.KEYLABEL_LATERALITY: Hvf_Test.compare_laterality,
+			Hvf_Object.KEYLABEL_FOVEA: Hvf_Test.compare_fovea,
+			Hvf_Object.KEYLABEL_FIXATION_LOSS: Hvf_Test.compare_fl,
+			Hvf_Object.KEYLABEL_FALSE_POS: Hvf_Test.compare_fp_fn,
+			Hvf_Object.KEYLABEL_FALSE_NEG: Hvf_Test.compare_fp_fn,
+			Hvf_Object.KEYLABEL_TEST_DURATION: Hvf_Test.compare_test_duration,
+			Hvf_Object.KEYLABEL_FIELD_SIZE: Hvf_Test.compare_field_size,
+			Hvf_Object.KEYLABEL_STRATEGY: Hvf_Test.compare_strategy,
+			Hvf_Object.KEYLABEL_PUPIL_DIAMETER: Hvf_Test.compare_pupil_diameter,
+			Hvf_Object.KEYLABEL_RX: Hvf_Test.compare_rx,
+			Hvf_Object.KEYLABEL_MD: Hvf_Test.compare_md_psd,
+			Hvf_Object.KEYLABEL_PSD: Hvf_Test.compare_md_psd,
+			Hvf_Object.KEYLABEL_VFI: Hvf_Test.compare_vfi
+		}
+
+		for key in key_to_func_dict.keys():
+			comparison_func = key_to_func_dict.get(key);
+
+			num_metadata_fields = num_metadata_fields+1;
+			ref_data = ref_metadata.get(key, "<No Value>")
+			test_data = test_metadata.get(key, "<No Value>")
+			if not (comparison_func(ref_data, test_data)):
+				metadata_fail_str_list.append("Key: {} - expected: {}, actual: {}".format(str(key), str(ref_data), str(test_data)))
+				metadata_errors.append((test_name, ref_data, test_data));
+
+		return_dict = {
+			"num_metadata_fields": num_metadata_fields,
+			"metadata_errors": metadata_errors,
+			"fail_string_list": metadata_fail_str_list
+
+		};
+
+		return return_dict;
+
+
+	def compare_names(ref_data, test_data):
+
+		ref_name = ref_data.lower().replace(", ", ",")
+		ref_name = ref_name.replace(",", " ")
+
+		test_name = test_data.lower().replace(", ", ",")
+		test_name = test_name.replace(",", " ")
+
+		bool = ref_name == test_name;
+
+		return bool;
+
+	def compare_dates(ref_data, test_data):
+
+		ref_date = Hvf_Test.get_datetime_obj(ref_data);
+		test_date = Hvf_Test.get_datetime_obj(test_data);
+
+		return ref_date == test_date;
+
+	def compare_ids(ref_data, test_data):
+		ref_data = str(ref_data);
+
+		while (len(ref_data) < 8):
+			ref_data = "0" + ref_data;
+
+		test_data = str(test_data);
+
+		while (len(test_data) < 8):
+			test_data = "0" + test_data;
+
+		return ref_data == test_data;
+
+	def compare_laterality(ref_data, test_data):
+		bool = ref_data.lower() == test_data.lower();
+
+		return bool;
+
+	def compare_fovea(ref_data, test_data):
+		return ref_data == test_data;
+
+	def compare_fl(ref_data, test_data):
+		try:
+			ref_data = ref_data.replace("x", "")
+			test_data = test_data.replace("x", "")
+
+		except:
+			ref_data = ref_data
+			test_data = test_data
+		bool = (ref_data == test_data)
+		return ref_data == test_data;
+
+	def compare_fp_fn(ref_data, test_data):
+		ref_data = ref_data.replace("%", "")
+		ref_data = ref_data.replace("x", "")
+		test_data = test_data.replace("%", "")
+		test_data = test_data.replace("x", "")
+		return ref_data == test_data;
+
+	def compare_test_duration(ref_data, test_data):
+
+		try:
+			ref_data_list = ref_data.split(":")
+			test_data_list = test_data.split(":")
+
+			bool = (int(ref_data_list[0]) == int(test_data_list[0])) and (int(ref_data_list[1]) == int(test_data_list[1]))
+
+		except:
+			bool = (ref_data == test_data);
+
+		return bool;
+
+	def compare_field_size(ref_data, test_data):
+		return ref_data == test_data;
+
+	def compare_strategy(ref_data, test_data):
+		bool = ref_data.lower().replace("-", " ") == test_data.lower().replace("-", " ");
+
+		return bool;
+
+	def compare_pupil_diameter(ref_data, test_data):
+		try:
+			ref_data = float(ref_data)
+			test_data = float(test_data)
+
+		except:
+			ref_data = ref_data
+			test_data = test_data
+
+		bool = (ref_data == test_data);
+		return bool;
+
+	def compare_rx(ref_data, test_data):
+
+
+		try:
+			ref_rx = Hvf_Test.get_rx_array(ref_data);
+			test_rx = Hvf_Test.get_rx_array(test_data);
+
+			bool = (ref_rx[0] == test_rx[0]) and (ref_rx[1] == test_rx[1]) and (ref_rx[2] == test_rx[2]);
+
+		except:
+			bool = ref_data == test_data;
+
+
+		return bool
+
+	def compare_md_psd(ref_data, test_data):
+		try:
+			bool = (float(ref_data) == float(test_data))
+		except:
+			bool = (ref_data == test_data)
+		return bool;
+
+	def compare_vfi(ref_data, test_data):
+		ref_data = ref_data.replace("%", "")
+		test_data = test_data.replace("%", "")
+		return ref_data == test_data;
+
+	def get_datetime_obj(date_string):
+
+		# Date options:
+		# MM-DD-YYYY
+		# MM/DD/YYYY
+		# MM/DD/YY
+		# Mon DD, YYYY
+		# YYYY-MM-DD
+
+		date_parse_string_list = [
+			"%m-%d-%Y",
+			"%-m-%-d-%Y",
+			"%d-%b-%y",
+			"%m/%d/%Y",
+			"%m/%d/%y",
+			"%-m/%-d/%Y",
+			"%b %d, %Y",
+			"%Y-%m-%d"
+		]
+
+		for parse_string in date_parse_string_list:
+			try:
+				datetime_obj = datetime.strptime(date_string, parse_string);
+
+				# If only 2 digit year, it will extrapolate to 20xx, which is likely
+				# not what we want. If year is in future, correct to 1900s.
+				if (datetime.today() <= datetime_obj):
+					datetime_obj = datetime_obj.replace(year=datetime_obj.year - 100)
+
+				return datetime_obj;
+			except:
+				continue;
+
+		return date_string;
+
+	def get_rx_array(rx_data):
+
+		rx_data = rx_data.lower().replace(" ", "");
+
+		sphere_array = rx_data.split("ds");
+
+		sphere = float(sphere_array[0]);
+
+		try:
+
+			cyl_array = sphere_array[1].split("dc");
+
+			cyl = float(cyl_array[0]);
+
+			axis_array = cyl_array[1].split("x");
+
+			axis = int(axis_array[1]);
+
+		except:
+			cyl = "";
+			axis = "";
+
+		return (sphere, cyl, axis);
+
 
 	def test_hvf_obj(test_name, reference_hvf_obj, test_hvf_obj):
 
@@ -191,30 +426,21 @@ class Hvf_Test:
 			# comparison data:
 
 			# Compare metadata:
-			metadata = test_hvf_obj.metadata;
-			test_metadata = reference_hvf_obj.metadata;
+			test_metadata = test_hvf_obj.metadata;
+			ref_metadata = reference_hvf_obj.metadata;
 
 			# Iterate through the keys, if mismatch then print and flip the flag; otherwise
 			# if we iterate through all and no mismatch, declare full match
-			metadata_fail_cnt = 0;
-			metadata_fail_str_list = [];
 
-			full_match = True
-			for key in test_metadata:
 
-				# Count as we go:
-				testing_data_dict["metadata_vals"] = testing_data_dict["metadata_vals"]+1;
+			# Check each metadata key individually, because comparisons require
+			# some processing
 
-				exp_val = test_metadata[key];
-				val = metadata.get(key, "<No value>");
-
-				if not(exp_val == val):
-					metadata_fail_cnt = metadata_fail_cnt + 1;
-					fail_str = "Key: " + str(key) + " - expected: " + str(exp_val) + ", actual: " + str(val);
-					metadata_fail_str_list.append(fail_str)
-
-					metadata_error = (exp_val, val);
-					testing_data_dict["metadata_errors"].append(metadata_error);
+			metadata_error_dict = Hvf_Test.compare_metadata_dicts(test_name, test_metadata, ref_metadata);
+			testing_data_dict["metadata_vals"] = metadata_error_dict.get("num_metadata_fields")
+			testing_data_dict["metadata_errors"] = metadata_error_dict.get("metadata_errors")
+			metadata_fail_cnt = len(metadata_error_dict.get("metadata_errors"));
+			metadata_fail_str_list = metadata_error_dict.get("fail_string_list")
 
 			# Print the results:
 			if (metadata_fail_cnt == 0):
@@ -545,58 +771,113 @@ class Hvf_Test:
 
 	# Do unit tests of a specific directory
 	@staticmethod
-	def test_unit_tests(sub_dir):
+	def test_unit_tests(sub_dir, test_type):
 
 		# Set up the logger module:
-		debug_level = Logger.DEBUG_FLAG_SYSTEM;
+		debug_level = Logger.DEBUG_FLAG_ERROR;
 		msg_logger = Logger.get_logger().set_logger_level(debug_level);
 
-		# TODO: Error check to make sure that sub_dir exists
-		master_test_path = os.path.join(Hvf_Test.UNIT_TEST_MASTER_PATH, sub_dir)
-		#master_test_path = Hvf_Test.construct_master_test_dir(sub_dir);
+		# Error check to make sure that sub_dir exists
+		test_dir_path = os.path.join(Hvf_Test.UNIT_TEST_MASTER_PATH, test_type, sub_dir);
+		test_data_path = os.path.join(test_dir_path, Hvf_Test.UNIT_TEST_TEST_DIR)
+		reference_data_path = os.path.join(test_dir_path, Hvf_Test.UNIT_TEST_REFERENCE_DIR)
 
-		if not os.path.isdir(master_test_path):
+		if (not os.path.isdir(test_dir_path)):
 			# This path does not exist!
-			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_ERROR, "Unit test directory \'" + sub_dir + "\' does not exist");
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_ERROR, "Unit test directory \'{}\' does not exist".format(test_dir_path));
 			return "";
 
+		if (not os.path.isdir(test_data_path)):
+			# This path does not exist!
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_ERROR, "Unit test directory \'{}\' does not exist".format(test_data_path));
+			return "";
 
-		test_image_path = os.path.join(master_test_path, Hvf_Test.UNIT_TEST_IMAGE_DIR)
-		serialization_path = os.path.join(master_test_path, Hvf_Test.UNIT_TEST_SERIALIZATION_DIR)
-
-		#test_image_path = Hvf_Test.construct_image_dir(sub_dir);
-		#serialization_path = Hvf_Test.construct_serialization_dir(sub_dir);
+		if (not os.path.isdir(reference_data_path)):
+			# This path does not exist!
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_ERROR, "Unit test directory \'{}\' does not exist".format(reference_data_path));
+			return "";
 
 		Logger.get_logger().log_msg(debug_level, "================================================================================");
-		Logger.get_logger().log_msg(debug_level, "Starting HVF Unit Tests: Image extraction vs reference");
+		Logger.get_logger().log_msg(debug_level, "Starting HVF Unit Testing");
+		Logger.get_logger().log_msg(debug_level, "Test Type: {}".format(test_type));
+		Logger.get_logger().log_msg(debug_level, "Unit Test Name: {}".format(sub_dir));
 
 		# Declare variable to keep track of times, errors, etc
 		# Will be a list of raw data --> we will calculate metrics at the end
 		testing_data_list = [];
 
-		# For each image in the test folder:
-		for hvf_image_name in os.listdir(test_image_path):
+		# For each file in the test folder:
+		for hvf_file in os.listdir(test_data_path):
 
 			# Skip hidden files:
-			if hvf_image_name.startswith('.'):
+			if hvf_file.startswith('.'):
 				continue;
 
-			# Then, find corresponding serialization text file
-			filename_root, ext = os.path.splitext(hvf_image_name);
+			# Then, find corresponding reference file
+			filename_root, ext = os.path.splitext(hvf_file);
 
-			# Load image, convert to an hvf_obj
-			hvf_image_path = os.path.join(test_image_path, hvf_image_name)
-			hvf_image = File_Utils.read_image_from_file(hvf_image_path); #test_image_path + hvf_image_name)
+			reference_hvf_obj = None;
+			test_hvf_obj = None;
 
-			Logger.get_logger().log_time( "Test " + filename_root, Logger.TIME_START);
-			test_hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image);
-			time_elapsed = Logger.get_logger().log_time( "Test " + filename_root, Logger.TIME_END);
+			# How to generate hvf obj from these files depends on what type of test:
 
 
-			serialization_file_path = os.path.join(serialization_path, filename_root + ".txt");
-			serialization = File_Utils.read_text_from_file(serialization_file_path);
-			reference_hvf_obj = Hvf_Object.get_hvf_object_from_text(serialization);
+			if (test_type == Hvf_Test.UNIT_TEST_IMAGE_VS_SERIALIZATION):
+				# Load image, convert to an hvf_obj
+				hvf_image_path = os.path.join(test_data_path, hvf_file)
+				hvf_image = File_Utils.read_image_from_file(hvf_image_path);
 
+				Logger.get_logger().log_time( "Test " + filename_root, Logger.TIME_START);
+				test_hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image);
+				time_elapsed = Logger.get_logger().log_time( "Test " + filename_root, Logger.TIME_END);
+
+				serialization_path = os.path.join(reference_data_path, filename_root + ".txt");
+				serialization = File_Utils.read_text_from_file(serialization_path);
+				reference_hvf_obj = Hvf_Object.get_hvf_object_from_text(serialization);
+
+
+			elif (test_type == Hvf_Test.UNIT_TEST_IMAGE_VS_DICOM):
+				# Load image, convert to an hvf_obj
+				hvf_image_path = os.path.join(test_data_path, hvf_file)
+				hvf_image = File_Utils.read_image_from_file(hvf_image_path);
+
+				Logger.get_logger().log_time( "Test " + filename_root, Logger.TIME_START);
+				test_hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image);
+				time_elapsed = Logger.get_logger().log_time( "Test " + filename_root, Logger.TIME_END);
+
+				dicom_file_path = os.path.join(reference_data_path, filename_root + ".dcm");
+				dicom_ds = File_Utils.read_dicom_from_file(dicom_file_path);
+				reference_hvf_obj = Hvf_Object.get_hvf_object_from_dicom(dicom_ds);
+
+			elif (test_type == Hvf_Test.UNIT_TEST_SERIALIZATION_VS_DICOM):
+
+				serialization_file_path = os.path.join(test_data_path, hvf_file);
+				serialization = File_Utils.read_text_from_file(serialization_file_path);
+				test_hvf_obj = Hvf_Object.get_hvf_object_from_text(serialization);
+
+				dicom_file_path = os.path.join(reference_data_path, filename_root + ".dcm");
+				dicom_ds = File_Utils.read_dicom_from_file(dicom_file_path);
+				reference_hvf_obj = Hvf_Object.get_hvf_object_from_dicom(dicom_ds);
+
+				time_elapsed = 0;
+
+
+			elif (test_type == Hvf_Test.UNIT_TEST_SERIALIZATION_VS_SERIALIZATION):
+
+				serialization_file_path = os.path.join(test_data_path, hvf_file);
+				serialization = File_Utils.read_text_from_file(serialization_file_path);
+				test_hvf_obj = Hvf_Object.get_hvf_object_from_text(serialization);
+
+				ref_serialization_path = os.path.join(reference_data_path, filename_root + ".txt");
+				ref_serialization = File_Utils.read_text_from_file(ref_serialization_path);
+				reference_hvf_obj = Hvf_Object.get_hvf_object_from_text(ref_serialization);
+
+				time_elapsed = 0;
+
+
+			else:
+				Logger.get_logger().log_msg(Logger.DEBUG_FLAG_ERROR, "Unrecognized test type \'{}\'".format(test_type));
+				return "";
 
 			testing_data_dict, testing_msgs = Hvf_Test.test_hvf_obj(filename_root, reference_hvf_obj, test_hvf_obj)
 			testing_data_dict["time"] = time_elapsed;
@@ -605,13 +886,11 @@ class Hvf_Test:
 			for msg in testing_msgs:
 				Logger.get_logger().log_msg(debug_level, msg)
 
-
 			testing_data_list.append(testing_data_dict);
 
 		Hvf_Test.print_unit_test_aggregate_metrics(testing_data_list);
 
 		return "";
-
 
 	###############################################################################
 	# ADD NEW UNIT TESTS ##########################################################
@@ -620,43 +899,62 @@ class Hvf_Test:
 	# If given a new file, add this to the unit test. This will use the current version to
 	# generate the expected result
 	@staticmethod
-	def add_unit_test(src_path, test_path):
-		# Load image
-		#src_path = args["add_test_case"];
-		hvf_image = File_Utils.read_image_from_file(src_path)
+	def add_unit_test(test_name, test_type, ref_data_path, test_data_path):
 
-		# Get hvf object and serialized it
-		hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image);
-		serialization = hvf_obj.serialize_to_json();
-
-		# Add the test cases to the test folders:
+		# Set up the logger module:
+		debug_level = Logger.DEBUG_FLAG_ERROR;
+		msg_logger = Logger.get_logger().set_logger_level(debug_level);
 
 		# First, check if we have this master directory (and image extraciton test directory) or not
-		master_test_path = Hvf_Test.construct_master_test_dir(test_path);
+		master_path = Hvf_Test.UNIT_TEST_MASTER_PATH;
+		test_type_path = os.path.join(Hvf_Test.UNIT_TEST_MASTER_PATH, test_type);
+		test_name_path = os.path.join(Hvf_Test.UNIT_TEST_MASTER_PATH, test_type, test_name);
+		test_data_path = os.path.join(test_dir_path, Hvf_Test.UNIT_TEST_TEST_DIR)
+		reference_data_path = os.path.join(test_dir_path, Hvf_Test.UNIT_TEST_REFERENCE_DIR)
 
-
-		# Construct the target path for the test folders:
-		test_image_path = Hvf_Test.construct_image_dir(test_path);
-		serialization_path = Hvf_Test.construct_serialization_dir(test_path)
 
 		# If they don't exist yet, create them
-		if not os.path.isdir(master_test_path):
-			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Making new unit test directory: " + test_path);
+		create_path_if_not_present = master_path
+		if not os.path.isdir(create_path_if_not_present):
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Making new unit test directory: " + create_path_if_not_present);
+			os.mkdir(create_path_if_not_present);
 
-			os.mkdir(master_test_path);
-			os.mkdir(test_image_path);
-			os.mkdir(serialization_path);
+		create_path_if_not_present = test_type_path
+		if not os.path.isdir(create_path_if_not_present):
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Making new unit test directory: " + create_path_if_not_present);
+			os.mkdir(create_path_if_not_present);
+
+		create_path_if_not_present = test_name_path
+		if not os.path.isdir(create_path_if_not_present):
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Making new unit test directory: " + create_path_if_not_present);
+			os.mkdir(create_path_if_not_present);
+
+		create_path_if_not_present = test_data_path
+		if not os.path.isdir(create_path_if_not_present):
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Making new unit test directory: " + create_path_if_not_present);
+			os.mkdir(create_path_if_not_present);
+
+		create_path_if_not_present = reference_data_path
+		if not os.path.isdir(create_path_if_not_present):
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Making new unit test directory: " + create_path_if_not_present);
+			os.mkdir(create_path_if_not_present);
 
 		# First, get file name
-		path, filename = os.path.split(src_path)
-		filename_root, ext = os.path.splitext(filename);
+		ref_path, ref_filename = os.path.split(ref_data_path);
+		test_path, test_filename = os.path.split(test_data_path);
 
-		# Save HVF image:
-		copyfile(src_path, test_image_path+filename)
+		# Just make sure that filenames are the same, because when we test them we look for same file name roots
+		ref_filename_root, ref_ext = os.path.splitext(ref_filename);
+		test_filename_root, test_ext = os.path.splitext(test_filename);
 
-		# Save HVF serialization:
-		File_Utils.write_string_to_file(serialization, serialization_path+filename_root+".txt")
+		if not (test_filename_root == ref_filename_root):
+			ref_filename = test_filename_root + "." + ref_ext
+			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Renaming reference file to {} to match with test file".format(ref_filename));
 
-		Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Added unit test case: " + filename);
+		# Save the files:
+		copyfile(ref_data_path, os.path.join(reference_data_path, ref_filename));
+		copyfile(test_data_path, os.path.join(test_data_path, test_filename));
+
+		Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Added unit test - TYPE: {}, NAME: {}".format(test_type, test_filename_root));
 
 		return "";
