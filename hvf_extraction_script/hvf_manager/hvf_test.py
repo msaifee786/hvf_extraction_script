@@ -92,13 +92,12 @@ class Hvf_Test:
 	# Helper function for comparing two plots - expected plot and actual plot
 	# Assumes 10x10 structure
 	@staticmethod
-	def compare_plots(expected, actual):
-
-		# Keep count of how many mismatches there are
-		fail_count = 0
-
+	def compare_plots(test_name, expected, actual):
 		# Keep running string of display string
 		fail_string_list = [];
+
+		# Keep list of all failures
+		fail_list = []
 
 		# Assume they are of the same size 10x10 - if not, this will fail
 		for c in range(10):
@@ -109,17 +108,23 @@ class Hvf_Test:
 				# Check for equality:
 				if not(val.is_equal(exp_val)):
 
-					# Failed - increase count, add to string
-					fail_count = fail_count+1;
-
 					exp_val_str = exp_val.get_display_string();
 					val_str = val.get_display_string();
+
+					fail_dict = {
+						"test_name" : test_name,
+						"location" : "{}, {}".format(c,r),
+						"expected" : exp_val.get_display_string(),
+						"actual" : val.get_display_string()
+
+					}
+					fail_list.append(fail_dict)
 
 					string = "--> Element (" + str(c) + ", " + str(r) + ") - expected " + exp_val.get_display_string() + ", actual " + val.get_display_string();
 					fail_string_list.append(string);
 
 		# Return the results
-		return fail_count, fail_string_list;
+		return fail_list, fail_string_list;
 
 	# Helper function for counting non-empty elements within a plots
 	# For use in error rate analysis
@@ -198,7 +203,14 @@ class Hvf_Test:
 			test_data = test_metadata.get(key, "<No Value>")
 			if not (comparison_func(ref_data, test_data)):
 				metadata_fail_str_list.append("Key: {} - expected: {}, actual: {}".format(str(key), str(ref_data), str(test_data)))
-				metadata_errors.append((test_name, ref_data, test_data));
+				fail_dict = {
+					"test_name" : test_name,
+					"field_name" : key,
+					"expected" : ref_data,
+					"actual" : test_data
+
+				}
+				metadata_errors.append(fail_dict);
 
 		return_dict = {
 			"num_metadata_fields": num_metadata_fields,
@@ -264,8 +276,10 @@ class Hvf_Test:
 	def compare_fp_fn(ref_data, test_data):
 		ref_data = ref_data.replace("%", "")
 		ref_data = ref_data.replace("x", "")
+		ref_data = ref_data.replace("X", "")
 		test_data = test_data.replace("%", "")
 		test_data = test_data.replace("x", "")
+		test_data = test_data.replace("X", "")
 		return ref_data == test_data;
 
 	def compare_test_duration(ref_data, test_data):
@@ -388,11 +402,13 @@ class Hvf_Test:
 		return (sphere, cyl, axis);
 
 
-	def test_hvf_obj(test_name, reference_hvf_obj, test_hvf_obj):
+	def test_hvf_obj(test_name, reference_hvf_obj, test_hvf_obj, time_elapsed):
 
 		testing_msgs = [];
 		testing_msgs.append("================================================================================");
 		testing_msgs.append("Starting test: " + test_name)
+		if (time_elapsed > 0):
+			testing_msgs.append("Time for extraction: {} ms".format(str(time_elapsed)));
 
 		# Declare our testing_data dictionary to keep track of data:
 		# Vals = count of total values
@@ -403,9 +419,9 @@ class Hvf_Test:
 			"metadata_vals" : 0,
 			"metadata_errors" : [],
 			"value_plot_vals" : 0,
-			"value_plot_errors" : 0,
+			"value_plot_errors" : [],
 			"perc_plot_vals" : 0,
-			"perc_plot_errors" : 0
+			"perc_plot_errors" : []
 
 		};
 
@@ -457,19 +473,19 @@ class Hvf_Test:
 			actual = test_hvf_obj.raw_value_array;
 			expected = reference_hvf_obj.raw_value_array
 
-			fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
+			fail_list, fail_string_list = Hvf_Test.compare_plots(test_name, expected, actual);
 
 			total_val_count = Hvf_Test.count_val_nonempty_elements(reference_hvf_obj.raw_value_array);
-
+			raw_val_count = total_val_count; ###
 
 			testing_data_dict["value_plot_vals"] = testing_data_dict["value_plot_vals"]+total_val_count;
-			testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"]+fail_count;
+			testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"] + fail_list;
 
 			# Print the results:
-			if (fail_count == 0):
+			if (len(fail_list) == 0):
 				testing_msgs.append("- Raw Value Plot: FULL MATCH");
 			else:
-				testing_msgs.append("- Raw Value Plot MISMATCH COUNT: " + str(fail_count));
+				testing_msgs.append("- Raw Value Plot MISMATCH COUNT: " + str(len(fail_list)));
 				for i in range(len(fail_string_list)):
 					testing_msgs.append(fail_string_list[i]);
 
@@ -479,19 +495,19 @@ class Hvf_Test:
 			actual = test_hvf_obj.abs_dev_value_array;
 			expected = reference_hvf_obj.abs_dev_value_array
 
-			fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
+			fail_list, fail_string_list = Hvf_Test.compare_plots(test_name, expected, actual);
 
 			total_val_count = Hvf_Test.count_val_nonempty_elements(reference_hvf_obj.abs_dev_value_array);
-
+			total_dev_val_count = total_val_count ###
 
 			testing_data_dict["value_plot_vals"] = testing_data_dict["value_plot_vals"]+total_val_count;
-			testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"]+fail_count;
+			testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"]+fail_list;
 
 			# Print the results:
-			if (fail_count == 0):
+			if (len(fail_list) == 0):
 				testing_msgs.append("- Total Deviation Value Plot: FULL MATCH");
 			else:
-				testing_msgs.append("- Total Deviation Value Plot MISMATCH COUNT: " + str(fail_count));
+				testing_msgs.append("- Total Deviation Value Plot MISMATCH COUNT: " + str(len(fail_list)));
 				for i in range(len(fail_string_list)):
 					testing_msgs.append(fail_string_list[i]);
 
@@ -506,15 +522,16 @@ class Hvf_Test:
 
 					# They are both in agreement, no pattern detected
 
-					fail_count = 0;
+					fail_list = [];
 					fail_string_list = [];
 					total_val_count = 1;
 
 				else:
 
 					# Both are arrays, and we can compare as usual
-					fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
-					total_val_count = Hvf_Test.count_val_nonempty_elements(actual);
+					fail_list, fail_string_list = Hvf_Test.compare_plots(test_name, expected, actual);
+					#total_val_count = Hvf_Test.count_val_nonempty_elements(actual);
+					total_val_count = Hvf_Test.count_val_nonempty_elements(expected);
 
 
 			else:
@@ -525,25 +542,38 @@ class Hvf_Test:
 
 					fail_string_list.append("Extracted NO PATTERN, but expected a pattern percentile array");
 					total_val_count = Hvf_Test.count_val_nonempty_elements(expected);
-					fail_count = total_val_count;
-
+					fail_element = {
+						"test_name" : test_name,
+						"location" : " ",
+						"expected" : "Extracted NO PATTERN, but expected a pattern percentile array",
+						"actual" : "Extracted NO PATTERN, but expected a pattern percentile array"
+					}
+					fail_list = [fail_element] * total_val_count
 
 				else:
 
 					# They are in disagreement -- actual is an array, but we didn't expect one
 					fail_string_list.append("Extracted a pattern percentile array, but expected NO PATTERN");
-					total_val_count = Hvf_Test.count_val_nonempty_elements(actual);
-					fail_count = total_val_count;
+					#total_val_count = Hvf_Test.count_val_nonempty_elements(actual);
+					total_val_count = Hvf_Test.count_val_nonempty_elements(expected);
+					fail_element = {
+						"test_name" : test_name,
+						"location" : " ",
+						"expected" : "Extracted a pattern percentile array, but expected NO PATTERN",
+						"actual" : "Extracted a pattern percentile array, but expected NO PATTERN"
+					}
+					fail_list = [fail_element] * total_val_count
 
+			pat_dev_val_count = total_val_count ###
 			testing_data_dict["value_plot_vals"] = testing_data_dict["value_plot_vals"]+total_val_count;
-			testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"]+fail_count;
+			testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"]+fail_list;
 
 			# Print the results:
-			if (fail_count == 0):
+			if (len(fail_list) == 0):
 				testing_msgs.append("- Pattern Deviation Value Plot: FULL MATCH");
 
 			else:
-				testing_msgs.append("- Pattern Deviation Value Plot MISMATCH COUNT: " + str(fail_count));
+				testing_msgs.append("- Pattern Deviation Value Plot MISMATCH COUNT: " + str(len(fail_list)));
 				for i in range(len(fail_string_list)):
 					testing_msgs.append(fail_string_list[i]);
 
@@ -551,19 +581,20 @@ class Hvf_Test:
 			actual = test_hvf_obj.abs_dev_percentile_array;
 			expected = reference_hvf_obj.abs_dev_percentile_array
 
-			fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
+			fail_list, fail_string_list = Hvf_Test.compare_plots(test_name, expected, actual);
 
 			total_val_count = Hvf_Test.count_perc_nonempty_elements(reference_hvf_obj.abs_dev_percentile_array);
+			total_dev_perc_count = total_val_count
 
 			testing_data_dict["perc_plot_vals"] = testing_data_dict["perc_plot_vals"]+total_val_count;
-			testing_data_dict["perc_plot_errors"] = testing_data_dict["perc_plot_errors"]+fail_count;
+			testing_data_dict["perc_plot_errors"] = testing_data_dict["perc_plot_errors"]+fail_list;
 
 
 			# Print the results:
-			if (fail_count == 0):
+			if (len(fail_list) == 0):
 				testing_msgs.append("- Total Deviation Percentile Plot: FULL MATCH");
 			else:
-				testing_msgs.append("- Total Deviation Percentile Plot MISMATCH COUNT: " + str(fail_count));
+				testing_msgs.append("- Total Deviation Percentile Plot MISMATCH COUNT: " + str(len(fail_list)));
 				for i in range(len(fail_string_list)):
 					testing_msgs.append(fail_string_list[i]);
 
@@ -582,15 +613,16 @@ class Hvf_Test:
 
 					# They are both in agreement, no pattern detected
 
-					fail_count = 0;
+					fail_list = [];
 					fail_string_list = [];
 					total_val_count = 1;
 
 				else:
 
 					# Both are arrays, and we can compare as usual
-					fail_count, fail_string_list = Hvf_Test.compare_plots(expected, actual);
-					total_val_count = Hvf_Test.count_perc_nonempty_elements(actual);
+					fail_list, fail_string_list = Hvf_Test.compare_plots(test_name, expected, actual);
+					#total_val_count = Hvf_Test.count_perc_nonempty_elements(actual);
+					total_val_count = Hvf_Test.count_perc_nonempty_elements(expected);
 
 
 			else:
@@ -602,31 +634,48 @@ class Hvf_Test:
 
 					fail_string_list.append("Extracted NO PATTERN, but expected a pattern percentile array");
 					total_val_count = Hvf_Test.count_perc_nonempty_elements(expected);
-					fail_count = total_val_count;
+					fail_element = {
+						"test_name" : test_name,
+						"location" : " ",
+						"expected" : "Extracted NO PATTERN, but expected a pattern percentile array",
+						"actual" : "Extracted NO PATTERN, but expected a pattern percentile array"
+					}
+					fail_list = [fail_element] * total_val_count
 
 
 				else:
 
 					# They are in disagreement -- actual is an array, but we didn't expect one
 					fail_string_list.append("Extracted a pattern percentile array, but expected NO PATTERN");
-					total_val_count = Hvf_Test.count_perc_nonempty_elements(actual);
-					fail_count = total_val_count;
+					#total_val_count = Hvf_Test.count_perc_nonempty_elements(actual);
+					total_val_count = Hvf_Test.count_perc_nonempty_elements(expected);
+					fail_element = {
+						"test_name" : test_name,
+						"location" : " ",
+						"expected" : "Extracted a pattern percentile array, but expected NO PATTERN",
+						"actual" : "Extracted a pattern percentile array, but expected NO PATTERN"
+					}
+					fail_list = [fail_element] * total_val_count
 
-
+			pat_dev_perc_count = total_val_count ###;
 			testing_data_dict["perc_plot_vals"] = testing_data_dict["perc_plot_vals"]+total_val_count;
-			testing_data_dict["perc_plot_errors"] = testing_data_dict["perc_plot_errors"]+fail_count;
+			testing_data_dict["perc_plot_errors"] = testing_data_dict["perc_plot_errors"]+fail_list;
 
 
 			# Print the results:
-			if (fail_count == 0):
+			if (len(fail_list) == 0):
 				testing_msgs.append("- Pattern Deviation Percentile Plot: FULL MATCH");
 			else:
-				testing_msgs.append("- Pattern Deviation Percentile Plot MISMATCH COUNT: " + str(fail_count));
+				testing_msgs.append("- Pattern Deviation Percentile Plot MISMATCH COUNT: " + str(len(fail_list)));
 				for i in range(len(fail_string_list)):
 					testing_msgs.append(fail_string_list[i]);
 
 
 			testing_msgs.append("END Test " + test_name + " FAILURE REPORT =====================")
+
+			print_array = [test_name, raw_val_count, total_dev_val_count, total_dev_perc_count, pat_dev_val_count, pat_dev_perc_count]
+
+			print("\t".join(list(map(lambda x: str(x), print_array))));
 
 		return testing_data_dict, testing_msgs;
 
@@ -668,7 +717,7 @@ class Hvf_Test:
 		Logger.get_logger().log_msg(debug_level, "")
 
 		value_total = sum(list(map(lambda x: x["value_plot_vals"], testing_data_list)));
-		value_errors = sum(list(map(lambda x: x["value_plot_errors"], testing_data_list)));
+		value_errors = sum(list(map(lambda x: len(x["value_plot_errors"]), testing_data_list)));
 		value_error_percentage = round(value_errors/value_total, 3)
 
 		Logger.get_logger().log_msg(debug_level, "Total number of value data points: " + str(value_total))
@@ -678,7 +727,7 @@ class Hvf_Test:
 		Logger.get_logger().log_msg(debug_level, "")
 
 		perc_total = sum(list(map(lambda x: x["perc_plot_vals"], testing_data_list)));
-		perc_errors = sum(list(map(lambda x: x["perc_plot_errors"], testing_data_list)));
+		perc_errors = sum(list(map(lambda x: len(x["perc_plot_errors"]), testing_data_list)));
 		perc_error_percentage = round(perc_errors/perc_total, 3)
 
 		Logger.get_logger().log_msg(debug_level, "Total number of percentile data points: " + str(perc_total))
@@ -804,7 +853,7 @@ class Hvf_Test:
 
 		# Declare variable to keep track of times, errors, etc
 		# Will be a list of raw data --> we will calculate metrics at the end
-		testing_data_list = [];
+		aggregate_testing_data_dict = {};
 
 		# For each file in the test folder:
 		for hvf_file in os.listdir(test_data_path):
@@ -879,16 +928,42 @@ class Hvf_Test:
 				Logger.get_logger().log_msg(Logger.DEBUG_FLAG_ERROR, "Unrecognized test type \'{}\'".format(test_type));
 				return "";
 
-			testing_data_dict, testing_msgs = Hvf_Test.test_hvf_obj(filename_root, reference_hvf_obj, test_hvf_obj)
+			testing_data_dict, testing_msgs = Hvf_Test.test_hvf_obj(filename_root, reference_hvf_obj, test_hvf_obj, time_elapsed)
 			testing_data_dict["time"] = time_elapsed;
 
 			# Print messages
-			for msg in testing_msgs:
-				Logger.get_logger().log_msg(debug_level, msg)
+			#for msg in testing_msgs:
+			#	Logger.get_logger().log_msg(debug_level, msg)
 
-			testing_data_list.append(testing_data_dict);
+			aggregate_testing_data_dict[filename_root] = testing_data_dict;
 
-		Hvf_Test.print_unit_test_aggregate_metrics(testing_data_list);
+		Hvf_Test.print_unit_test_aggregate_metrics(aggregate_testing_data_dict.values());
+
+		metadata_error_header_list = ["test_name", "field_name", "expected", "actual"];
+		metadata_error_output = "\t".join(metadata_error_header_list) + "\n";
+		for test in aggregate_testing_data_dict.keys():
+			for error in aggregate_testing_data_dict[test]["metadata_errors"]:
+				error_string = "\t".join(error.values()) + "\n";
+				metadata_error_output = metadata_error_output + error_string;
+
+		plot_header_list = ["test_name", "location", "expected", "actual"];
+		value_plot_error_output = "\t".join(plot_header_list) + "\n";
+		for test in aggregate_testing_data_dict.keys():
+			for error in aggregate_testing_data_dict[test]["value_plot_errors"]:
+				error_string = "\t".join(error.values()) + "\n";
+				value_plot_error_output = value_plot_error_output + error_string;
+
+		perc_plot_error_output = "\t".join(plot_header_list) + "\n";
+		for test in aggregate_testing_data_dict.keys():
+			for error in aggregate_testing_data_dict[test]["perc_plot_errors"]:
+				error_string = "\t".join(error.values()) + "\n";
+				perc_plot_error_output = perc_plot_error_output + error_string;
+
+		if (True):
+			File_Utils.write_string_to_file(metadata_error_output, sub_dir + "_metadata_errors.tsv")
+			File_Utils.write_string_to_file(value_plot_error_output, sub_dir + "_value_plot_errors.tsv")
+			File_Utils.write_string_to_file(perc_plot_error_output, sub_dir + "_perc_plot_errors.tsv")
+
 
 		return "";
 

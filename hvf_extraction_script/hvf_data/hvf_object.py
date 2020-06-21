@@ -370,8 +370,22 @@ class Hvf_Object:
 
 		# ===== NAME/ID =====
 		# Name written usually as LAST^FIRST, so need to convert it
-		field = str(dicom_ds.PatientName);
-		field = field.replace("^", ", ")
+		field = "";
+		try:
+			for i in range(len(dicom_ds.OriginalAttributesSequence)):
+				try:
+					field = str(dicom_ds.OriginalAttributesSequence[i].ModifiedAttributesSequence[0].PatientName);
+					field = field.replace("^", " ")
+					break;
+				except:
+					continue;
+
+			if (field == ""):
+				raise Error;
+		except:
+			field = str(dicom_ds.PatientName);
+			field = field.replace("^", ", ")
+
 		hvf_metadata[Hvf_Object.KEYLABEL_NAME] = field;
 
 		hvf_metadata[Hvf_Object.KEYLABEL_ID] = str(dicom_ds.PatientID);
@@ -414,15 +428,32 @@ class Hvf_Object:
 		fl_denominator = str(dicom_ds.FixationSequence[0].FixationCheckedQuantity);
 		hvf_metadata[Hvf_Object.KEYLABEL_FIXATION_LOSS] = fl_numerator + "/" + fl_denominator;
 
-		fp = float(str(dicom_ds.VisualFieldCatchTrialSequence[0].FalsePositivesEstimate));
-		fp = str(int(fp)) + "%"
+		try:
+			fp = float(str(dicom_ds.VisualFieldCatchTrialSequence[0].FalsePositivesEstimate));
+			fp = str(int(fp)) + "%"
+		except:
+			# May be an old HVF, when FP was reported as fraction
+
+			fp_num = str(dicom_ds.VisualFieldCatchTrialSequence[0].FalsePositivesQuantity);
+			fp_den = str(dicom_ds.VisualFieldCatchTrialSequence[0].PositiveCatchTrialsQuantity);
+			fp = fp_num + "/" + fp_den;
+
 		hvf_metadata[Hvf_Object.KEYLABEL_FALSE_POS] = fp;
 
-		fn = float(str(dicom_ds.VisualFieldCatchTrialSequence[0].FalseNegativesEstimate));
-		if (fn == -100.0):
-			fn = "N/A"
-		else:
-			fn = str(int(fn)) + "%"
+
+		try:
+			fn = float(str(dicom_ds.VisualFieldCatchTrialSequence[0].FalseNegativesEstimate));
+			if (fn == -100.0):
+				fn = "N/A"
+			else:
+				fn = str(int(fn)) + "%"
+		except:
+			# May be an old HVF, when FN was reported as fraction
+
+			fn_num = str(dicom_ds.VisualFieldCatchTrialSequence[0].FalseNegativesQuantity);
+			fn_den = str(dicom_ds.VisualFieldCatchTrialSequence[0].NegativeCatchTrialsQuantity);
+			fn = fn_num + "/" + fn_den;
+
 		hvf_metadata[Hvf_Object.KEYLABEL_FALSE_NEG] = fn;
 
 		# ===== FIELD SIZE =====
@@ -811,7 +842,7 @@ class Hvf_Object:
 
 		return_version = Hvf_Object.HVF_LAYOUT_V2;
 
-		if (width < 1500):
+		if (width < 1400):
 			return_version = Hvf_Object.HVF_LAYOUT_V1;
 
 		# Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
@@ -1093,7 +1124,8 @@ class Hvf_Object:
 				try:
 					field = output.group(1);
 					field = Regex_Utils.remove_spaces(field);
-					field = Regex_Utils.remove_non_numeric(field, []);
+					field = field.replace("O", "0");
+					#field = Regex_Utils.remove_non_numeric(field, []);
 				except:
 					Logger.get_logger().log_msg(Logger.DEBUG_FLAG_WARNING, "Unable to extract fovea value");
 
@@ -1184,6 +1216,7 @@ class Hvf_Object:
 				field = output.group(1);
 				field = Regex_Utils.remove_spaces(field);
 			except:
+				field = "";
 				Logger.get_logger().log_msg(Logger.DEBUG_FLAG_WARNING, "Unable to extract pupil diameter");
 
 

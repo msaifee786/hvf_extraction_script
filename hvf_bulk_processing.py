@@ -17,6 +17,10 @@
 #			Outputs a directory of JSON text files into directory
 #			"serialized_hvf"; makes directory if does not exist
 #
+#		python hvf_bulk_processing -d <directory_of_dicom_files>
+#			Outputs a directory of JSON text files into directory
+#			"serialized_hvf"; makes directory if does not exist
+#
 #		python hvf_bulk_processing -f <path_to_tsv_file>
 #			Outputs a directory of JSON text files into directory
 #			"serialized_hvf"; makes directory if does not exist
