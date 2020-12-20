@@ -21,11 +21,14 @@
 # Import necessary packages
 import cv2
 import sys
+import os
 
 # Import some helper packages:
 import numpy as np
 from PIL import Image
 from functools import reduce
+
+import pkgutil
 
 # Import some of our own written modules:
 
@@ -186,7 +189,15 @@ class Hvf_Plot_Array:
 	def initialize_class_vars(cls):
 
 		# Load the icons from a sub-directory -- assumes they are present
-		cls.triangle_icon_template = cv2.cvtColor(File_Utils.read_image_from_file("hvf_extraction_script/hvf_data/other_icons/icon_triangle.PNG"), cv2.COLOR_BGR2GRAY);
+		#triangle_icon_template_path = importlib_resources.path("hvf_extraction_script.hvf_data.other_icons", "icon_triangle.PNG");
+		#print(triangle_icon_template_path.as_posix());
+
+		# Get resource directory - get loader, then cleave off __init__.py
+		resource_module_dir, _ = os.path.split(pkgutil.get_loader("hvf_extraction_script.hvf_data.other_icons").get_filename());
+
+		triangle_icon_template_path = os.path.join(resource_module_dir, 'icon_triangle.PNG');
+
+		cls.triangle_icon_template = cv2.cvtColor(File_Utils.read_image_from_file(triangle_icon_template_path), cv2.COLOR_BGR2GRAY);
 
 		# Lastly, flip the flag to indicate initialization has been done
 		cls.is_initialized = True;

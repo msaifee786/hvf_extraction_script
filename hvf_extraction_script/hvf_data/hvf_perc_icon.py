@@ -32,6 +32,8 @@ import numpy as np
 from PIL import Image
 from functools import reduce
 
+import pkgutil
+
 # Import some of our own written modules:
 from hvf_extraction_script.utilities.logger import Logger
 from hvf_extraction_script.utilities.image_utils import Image_Utils
@@ -144,10 +146,22 @@ class Hvf_Perc_Icon:
 	def initialize_class_vars(cls):
 
 		# Load the perc icons from a sub-directory -- assumes they are present
-		cls.perc_5_template = cv2.cvtColor(File_Utils.read_image_from_file("hvf_extraction_script/hvf_data/perc_icons/perc_5.JPG"), cv2.COLOR_BGR2GRAY);
-		cls.perc_2_template = cv2.cvtColor(File_Utils.read_image_from_file("hvf_extraction_script/hvf_data/perc_icons/perc_2.JPG"), cv2.COLOR_BGR2GRAY);
-		cls.perc_1_template = cv2.cvtColor(File_Utils.read_image_from_file("hvf_extraction_script/hvf_data/perc_icons/perc_1.JPG"), cv2.COLOR_BGR2GRAY);
-		cls.perc_half_template = cv2.cvtColor(File_Utils.read_image_from_file("hvf_extraction_script/hvf_data/perc_icons/perc_half.JPG"), cv2.COLOR_BGR2GRAY);
+		resource_module_dir, _ = os.path.split(pkgutil.get_loader("hvf_extraction_script.hvf_data.perc_icons").get_filename());
+
+		perc_5_template_path = os.path.join(resource_module_dir, "perc_5.JPG");
+		perc_2_template_path = os.path.join(resource_module_dir, "perc_2.JPG");
+		perc_1_template_path = os.path.join(resource_module_dir, "perc_1.JPG");
+		perc_half_template_path = os.path.join(resource_module_dir, "perc_half.JPG");
+
+		cls.perc_5_template = cv2.cvtColor(File_Utils.read_image_from_file(perc_5_template_path), cv2.COLOR_BGR2GRAY);
+		cls.perc_2_template = cv2.cvtColor(File_Utils.read_image_from_file(perc_2_template_path), cv2.COLOR_BGR2GRAY);
+		cls.perc_1_template = cv2.cvtColor(File_Utils.read_image_from_file(perc_1_template_path), cv2.COLOR_BGR2GRAY);
+		cls.perc_half_template = cv2.cvtColor(File_Utils.read_image_from_file(perc_half_template_path), cv2.COLOR_BGR2GRAY);
+
+		#cls.perc_5_template = cv2.cvtColor(File_Utils.read_image_from_file("hvf_extraction_script/hvf_data/perc_icons/perc_5.JPG"), cv2.COLOR_BGR2GRAY);
+		#cls.perc_2_template = cv2.cvtColor(File_Utils.read_image_from_file("hvf_extraction_script/hvf_data/perc_icons/perc_2.JPG"), cv2.COLOR_BGR2GRAY);
+		#cls.perc_1_template = cv2.cvtColor(File_Utils.read_image_from_file("hvf_extraction_script/hvf_data/perc_icons/perc_1.JPG"), cv2.COLOR_BGR2GRAY);
+		#cls.perc_half_template = cv2.cvtColor(File_Utils.read_image_from_file("hvf_extraction_script/hvf_data/perc_icons/perc_half.JPG"), cv2.COLOR_BGR2GRAY);
 
 		# Load them into lists for ease of use:
 		cls.template_perc_list = [ cls.perc_5_template, cls.perc_2_template, cls.perc_1_template, cls.perc_half_template ];

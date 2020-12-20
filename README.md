@@ -8,6 +8,7 @@ Python module for Humphrey Visual Field (HVF) report data extraction. Extracts d
 - Python 3.6.7 or higher
 - TesserOCR
 - Regex
+- PyDicom
 - Pillow
 - OpenCV 4.2.0
 - FuzzyWuzzy

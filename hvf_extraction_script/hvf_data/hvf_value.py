@@ -32,6 +32,8 @@ import numpy as np
 from PIL import Image
 from functools import reduce
 
+import pkgutil
+
 # Import some of our own written modules:
 
 # For error/debug logging:
@@ -169,12 +171,13 @@ class Hvf_Value:
 
 		# Iterate through the icon folders:
 
-		master_dir = "hvf_extraction_script/hvf_data/value_icons/";
-		dir_list = File_Utils.get_dirs_within_dir(master_dir);
+		module_list = ["hvf_extraction_script.hvf_data.value_icons.v1", "hvf_extraction_script.hvf_data.value_icons.v2"]
 
-		for full_dir_path in dir_list:
+		for module in module_list:
 
-			head, dir  = os.path.split(full_dir_path);
+			module_dir, _ = os.path.split(pkgutil.get_loader(module).get_filename());
+
+			head, dir  = os.path.split(module_dir);
 
 			# Assume that names are standardized within the directory:
 
@@ -185,8 +188,7 @@ class Hvf_Value:
 				value_icon_file_name = 'value_' + str(ii) + '.PNG';
 
 				# Construct full path:
-				value_icon_full_path = os.path.join(master_dir, full_dir_path, value_icon_file_name);
-
+				value_icon_full_path = os.path.join(module_dir, value_icon_file_name);
 				icon_template = cv2.cvtColor(File_Utils.read_image_from_file(value_icon_full_path), cv2.COLOR_BGR2GRAY);
 
 				# Add to value icon template dictionary:
@@ -197,13 +199,13 @@ class Hvf_Value:
 
 
 			# Add minus template:
-			minus_icon_full_path = os.path.join(master_dir, full_dir_path, 'value_minus.PNG')
+			minus_icon_full_path = os.path.join(module_dir, 'value_minus.PNG')
 			minus_template = cv2.cvtColor(File_Utils.read_image_from_file(minus_icon_full_path), cv2.COLOR_BGR2GRAY);
 
 			cls.minus_icon_templates[dir] = minus_template;
 
 			# Add less than template:
-			less_than_full_path = os.path.join(master_dir, full_dir_path, 'value_less_than.PNG')
+			less_than_full_path = os.path.join(module_dir, 'value_less_than.PNG')
 			less_than_template = cv2.cvtColor(File_Utils.read_image_from_file(less_than_full_path), cv2.COLOR_BGR2GRAY);
 
 			cls.less_than_icon_templates[dir] = less_than_template;
