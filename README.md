@@ -1,6 +1,6 @@
 # HVF Extraction Script
 
-Python module for Humphrey Visual Field (HVF) report data extraction. Extracts data using OCR (tesseract) and image processing techniques (openCV) to extract data into an object oriented format for further processing.
+Python module for Humphrey Visual Field (HVF) report data extraction. The package can taken in HVF single field analysis report images (from HFA2 or HFA3), and using OCR (tesseract) and image processing techniques (openCV), extracts data into an object oriented format for further processing.
 
 ## Getting Started
 
@@ -53,7 +53,7 @@ Occasionally, installation of hvf-extraction-script has trouble locating some de
 
 ### Overview
 
-HVF data can be stored in a variety of formats that can be imported into the hvf_extraction_script platform. The platform can import data from 1) HVF report images (PNG, JPG, etc - any file format that openCV can read), 2) HVF DICOM files, and 3) serialized JSON files (produced by the script platform). See below for examples on how to import data from these different sources.
+HVF data can be stored in a variety of formats that can be imported into the hvf_extraction_script platform. The platform can import data from 1) HVF single field analysis report images from HFA2 or HFA3 (PNG, JPG, etc - any file format that openCV can read), 2) HVF DICOM files, and 3) serialized JSON files (produced by the script platform). See below for examples on how to import data from these different sources.
 
 Once imported, data is managed primarily through the Hvf_Object class, which contains the report metadata (name/ID, test date, field size and strategy, etc), and the 5 data plots (raw sensitivity, total deviation value/percentile plots, and pattern deviation value/percentile plots). Plot data is stored as Hvf_Plot_Array objects (internally as 10x10 Numpy arrays), and individual plot data elements are stored as either Hvf_Value or Hvf_Perc_Icon objects. See below for the basic structure of Hvf_Object (and helper classes).
 
