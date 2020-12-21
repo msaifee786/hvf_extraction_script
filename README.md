@@ -68,59 +68,59 @@ Subpackage utilities contains general purpose utility modules not specific to HV
 Importing/extracting data from an image:
 
 ```shell
-from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object
-from hvf_extraction_script.utilities.file_utils import File_Utils
+>>> from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object
+>>> from hvf_extraction_script.utilities.file_utils import File_Utils
 
-hvf_img_path = "path/to/hvf/image/file/to/read";
-hvf_img = File_Utils.read_image_from_file(hvf_img_path);
-hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_img);
+>>> hvf_img_path = "path/to/hvf/image/file/to/read";
+>>> hvf_img = File_Utils.read_image_from_file(hvf_img_path);
+>>> hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_img);
 ```
 
 Importing data from a DICOM file:
 
 ```shell
-from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object
-from hvf_extraction_script.utilities.file_utils import File_Utils
+>>> from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object
+>>> from hvf_extraction_script.utilities.file_utils import File_Utils
 
-hvf_dicom_path = "path/to/hvf/dicom/file/to/read";
-hvf_dicom = File_Utils.read_dicom_from_file(hvf_dicom_path);
-hvf_obj = Hvf_Object.get_hvf_object_from_dicom(hvf_dicom);
+>>> hvf_dicom_path = "path/to/hvf/dicom/file/to/read";
+>>> hvf_dicom = File_Utils.read_dicom_from_file(hvf_dicom_path);
+>>> hvf_obj = Hvf_Object.get_hvf_object_from_dicom(hvf_dicom);
 ```
 
 Saving as a text file:
 ```shell
-serialized_string = hvf_obj.serialize_to_json();
-txt_file_path = “path/to/target/file/to/write”;
-File_Utils.write_string_to_file(serialized_string, target_file_path)
+>>> serialized_string = hvf_obj.serialize_to_json();
+>>> txt_file_path = “path/to/target/file/to/write”;
+>>> File_Utils.write_string_to_file(serialized_string, target_file_path)
 ```
 
 Reinstantiating Hvf_Object from text file
 ```shell
-hvf_txt = File_Utils.read_text_from_file(txt_file_path);
-hvf_obj = Hvf_Object.get_hvf_object_from_text(hvf_txt);
+>>> hvf_txt = File_Utils.read_text_from_file(txt_file_path);
+>>> hvf_obj = Hvf_Object.get_hvf_object_from_text(hvf_txt);
 ```
 
 Export to spreadsheet (tab-separated values):
 ```shell
 # Takes in a dictionary of filename_string -> hvf_obj
-from hvf_extraction_script.hvf_manager.hvf_export import Hvf_Export;
+>>> from hvf_extraction_script.hvf_manager.hvf_export import Hvf_Export;
 
-dict_of_hvf_objs = {“file1.PNG”: hvf_obj1, “file2.PNG”: hvf_obj2, “file3.PNG”: hvf_obj3 };
-spreadsheet_string = Hvf_Export.export_hvf_list_to_spreadsheet(dict_of_hvf_objs)
-File_Utils.write_string_to_file(return_string, "output_spreadsheet.tsv")
+>>> dict_of_hvf_objs = {“file1.PNG”: hvf_obj1, “file2.PNG”: hvf_obj2, “file3.PNG”: hvf_obj3 };
+>>> spreadsheet_string = Hvf_Export.export_hvf_list_to_spreadsheet(dict_of_hvf_objs)
+>>> File_Utils.write_string_to_file(return_string, "output_spreadsheet.tsv")
 # Saves data in a spreadsheet, with first column as filename
 ```
 
 Import Hvf_Objects from outputted spreadsheet (tab-separated values):
 ```shell
-tsv_file_string = File_Utils.read_text_from_file("output_spreadsheet.tsv");
-dict_of_hvf_objs = Hvf_Export.import_hvf_list_from_spreadsheet(tsv_file_string);
+>>> tsv_file_string = File_Utils.read_text_from_file("output_spreadsheet.tsv");
+>>> dict_of_hvf_objs = Hvf_Export.import_hvf_list_from_spreadsheet(tsv_file_string);
 # Returns dictionary of filename_string -> hvf_obj
 ```
 
 ### Structure of Hvf_Object and helper classes
 
-Hvf_Object contains data from the source HVF study within instance variables. Metadata (including name, ID, field size, reliability indices, etc) are stored within a instance variable dictionary; data is accessible using keys stored within Hvf_Object as constants:
+Hvf_Object contains data from the source HVF study within instance variables. Metadata (including name, ID, field size, reliability indices, etc) strings are stored within a instance variable dictionary; data is accessible using keys stored within Hvf_Object as constants:
 
 - KEYLABEL_LAYOUT # Internal data corresponding to layout of source HVF image
 - KEYLABEL_NAME
@@ -145,10 +145,11 @@ Metadata can be accessed from the object as such:
 
 ```shell
 # As example, accessing name:
-name = hvf_obj.metadata[Hvf_Object.KEYLABEL_NAME];
+>>> hvf_obj.metadata[Hvf_Object.KEYLABEL_NAME];
+  'SMITH, JOHN'
 ```
 
-Additionly, there are 5 plots in every HVF object, represented by Hvf_Plot_Array objects. These can be accessed by:
+Additionally, there are 5 plots in every HVF object, represented by Hvf_Plot_Array objects. These can be accessed by:
 
 ```shell
 # Raw sensitivity array:
@@ -200,6 +201,25 @@ Hvf_Perc_Icon is a similar wrapper class for a percentile icon in a percentile p
 
 Values from Hvf_Perc_Icon can be queried by calling the method get_enum() to get the enum value, or get_display_string(), which will get a character representing the icon.
 
+For example, to query for a specific value:
+```shell
+# As example, accessing name:
+>>> hvf_obj.metadata[Hvf_Object.KEYLABEL_NAME]
+  'SMITH, JOHN'
+>>> hvf_obj.metadata[Hvf_Object.KEYLABEL_MD]
+  '-5.54'
+>>> hvf_obj.metadata[Hvf_Object.KEYLABEL_VFI]
+  '87%'
+>>> hvf_obj.raw_value_array.plot_array[0,0].get_value()
+  -99 # the top-left corner value [0,0] is always blank - Hvf_Value.VALUE_NO_VALUE
+>>> hvf_obj.raw_value_array.plot_array[0,0].get_display_string()
+  ' '
+>>> hvf_obj.pat_dev_percentile_array.plot_array[4,4].get_enum()
+  1 # Enum value for Hvf_Perc_Icon.PERC_NORMAL
+>>> hvf_obj.pat_dev_percentile_array.plot_array[4,4].get_display_string()
+  '.' # Character representation of Hvf_Perc_Icon.PERC_NORMAL
+```
+
 ### Running Unit Tests
 
 Single Image Testing:
@@ -207,13 +227,13 @@ Single Image Testing:
 Running a single image test performs an extraction of an image report, shows its extraction data in pretty-print, and tests serialization/deserialization procedures
 
 ```shell
-from hvf_extraction_script.hvf_manager.hvf_test import Hvf_Test
-from hvf_extraction_script.utilities.file_utils import File_Utils
+>>> from hvf_extraction_script.hvf_manager.hvf_test import Hvf_Test
+>>> from hvf_extraction_script.utilities.file_utils import File_Utils
 
-image_path = “path/to/image/file.PNG”;
-hvf_image = File_Utils.read_image_from_file(image_path);
-Hvf_Test.test_single_image(hvf_image);
-…
+>>> image_path = “path/to/image/file.PNG”;
+>>> hvf_image = File_Utils.read_image_from_file(image_path);
+>>> Hvf_Test.test_single_image(hvf_image);
+...
 ```
 
 Unit Testing:
@@ -229,17 +249,17 @@ The image file and reference test files are stored under hvf_test_cases with cor
 Adding unit tests:
 
 ```shell
-unit_test_name = “unit_test_name”
-test_type = Hvf_Test.UNIT_TEST_IMAGE_VS_DICOM;
-ref_data_path = "path/to/dicom/file.dcm"
-test_data_path = “path/to/image/file.PNG”;
-Hvf_Test.add_unit_test(test_name, test_type, ref_data_path, test_data_path);
+>>> unit_test_name = “unit_test_name”
+>>> test_type = Hvf_Test.UNIT_TEST_IMAGE_VS_DICOM;
+>>> ref_data_path = "path/to/dicom/file.dcm"
+>>> test_data_path = “path/to/image/file.PNG”;
+>>> Hvf_Test.add_unit_test(test_name, test_type, ref_data_path, test_data_path);
 
 ```
 
 Running unit tests:
 ```shell
-Hvf_Test.test_unit_tests(unit_test_nam, test_type)
+>>> Hvf_Test.test_unit_tests(unit_test_nam, test_type)
 ...
 [SYSTEM] ================================================================================
 [SYSTEM] Starting test: v2_26
