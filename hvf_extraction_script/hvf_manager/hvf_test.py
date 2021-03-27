@@ -746,7 +746,7 @@ class Hvf_Test:
 
 		# Set up the logger module:
 		debug_level = Logger.DEBUG_FLAG_SYSTEM;
-		#debug_level = Logger.DEBUG_FLAG_DEBUG;
+		#debug_level = Logger.DEBUG_FLAG_INFO;
 		msg_logger = Logger.get_logger().set_logger_level(debug_level);
 
 		# Instantiate hvf object:
@@ -960,6 +960,7 @@ class Hvf_Test:
 				perc_plot_error_output = perc_plot_error_output + error_string;
 
 		if (True):
+			metadata_error_output = metadata_error_output.encode('ascii', 'ignore').decode('unicode_escape')
 			File_Utils.write_string_to_file(metadata_error_output, sub_dir + "_metadata_errors.tsv")
 			File_Utils.write_string_to_file(value_plot_error_output, sub_dir + "_value_plot_errors.tsv")
 			File_Utils.write_string_to_file(perc_plot_error_output, sub_dir + "_perc_plot_errors.tsv")

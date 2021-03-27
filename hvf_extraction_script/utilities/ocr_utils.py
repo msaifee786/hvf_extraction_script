@@ -47,6 +47,7 @@ class Ocr_Utils:
 
         if not Ocr_Utils.OCR_API_HANDLE:
             Ocr_Utils.OCR_API_HANDLE = PyTessBaseAPI(psm=PSM.SINGLE_COLUMN)
+            #Ocr_Utils.OCR_API_HANDLE = PyTessBaseAPI(psm=PSM.SINGLE_BLOCK)
 
         Ocr_Utils.OCR_API_HANDLE.SetImage(img_pil);
         text = Ocr_Utils.OCR_API_HANDLE.GetUTF8Text();

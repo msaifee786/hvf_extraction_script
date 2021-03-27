@@ -220,8 +220,7 @@ class Hvf_Object:
 		WARNING_HVF_WIDTH = 1000;
 
 		#if (width < WARNING_HVF_WIDTH):
-			#Logger.get_logger().log_msg(Logger.DEBUG_FLAG_WARNING, "Resolution low, high risk for detection errors");
-
+			#Logger.get_logger().log_msg(Logger.DEBUG_FLAG_WARNING, "Resolution low, high risk for detection errors")
 
 		if (width < MIN_HVF_WIDTH):
 			scale_factor = MIN_HVF_WIDTH/width;
@@ -530,7 +529,7 @@ class Hvf_Object:
 		elif not (sphere == "0.00"):
 			rx = "{}DS".format(sphere);
 		else:
-			rx = ""
+			rx = "+0.00DS"
 
 		hvf_metadata[Hvf_Object.KEYLABEL_RX] = rx;
 
@@ -943,7 +942,6 @@ class Hvf_Object:
 		header_text1 = Ocr_Utils.perform_ocr(header_slice_image1);
 		metadata_text = metadata_text + "\n" + header_text1;
 
-
 		# The middle headers layout depends on layout type:
 		#	In layout 1, has 2 middle headers (header 2 and 3)
 		#		2: Stimulus, background, Strategy
@@ -972,6 +970,10 @@ class Hvf_Object:
 			header_slice_image3 = Image_Utils.slice_image(hvf_image_gray, 0, 0.27, 0.547, (0.83-0.547));
 			header_text3 = Ocr_Utils.perform_ocr(header_slice_image3);
 
+			#print(header_text3);
+			#cv2.imshow("rx", header_slice_image3);
+			#cv2.waitKey();
+
 			header_text_middle = header_text2 + header_text3
 
 		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
@@ -981,8 +983,7 @@ class Hvf_Object:
 			# Width: 0.403 -> 0.75
 			# Contains: Stimulus, background, and strategy
 			# Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
-			header_slice_image_middle = Image_Utils.slice_image(hvf_image_gray, 0, 0.27, 0.403, (0.75-0.403));
-
+			header_slice_image_middle = Image_Utils.slice_image(hvf_image_gray, 0, 0.25, 0.403, (0.75-0.403));
 			header_text_middle = Ocr_Utils.perform_ocr(header_slice_image_middle);
 
 		# Header 4 slice:
@@ -1195,6 +1196,8 @@ class Hvf_Object:
 
 		# ===== TEST DURATION DETECTION =====
 		field, tokenized_header1_list = Regex_Utils.fuzzy_regex('Test Duration: ', tokenized_header1_list);
+		# Sometimes get trailing characters from other fields, cleave them off
+		field = field.split()[0]
 		field = Regex_Utils.remove_spaces(field);
 		field = Regex_Utils.remove_non_numeric(field, [':'])
 		#field = Regex_Utils.clean_nonascii(field);
@@ -1260,7 +1263,7 @@ class Hvf_Object:
 				elif (sphere):
 					rx = "{}DS".format(sphere);
 				else:
-					rx = ""
+					rx = "+0.00DS"
 
 				field = rx;
 
@@ -1289,11 +1292,30 @@ class Hvf_Object:
 		# Slice+OCR bottom right
 		# Contains: MD, PSD, VFI
 		# These ratio values are all found empirically - edit to be as narrow as possible while
-		# still retaining flexibility
+		# still retaining flexibility; specific to each layout
 
-		# Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
-		dev_val_slice_image = Image_Utils.slice_image(hvf_image_gray, 0.5, 0.15, 0.65, 0.35)
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1):
+			# Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
+			dev_val_slice_image = Image_Utils.slice_image(hvf_image_gray, 0.5, 0.15, 0.70, 0.35)
+
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+			# Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
+			dev_val_slice_image = Image_Utils.slice_image(hvf_image_gray, 0.45, 0.2, 0.65, 0.35)
+
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
+			# Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
+			dev_val_slice_image = Image_Utils.slice_image(hvf_image_gray, 0.5, 0.15, 0.65, 0.35)
+
+
+		global_threshold = 0.00001
+		relative_threshold = 0.000005
+		dev_val_slice_image = Image_Utils.delete_stray_marks(dev_val_slice_image, global_threshold, relative_threshold);
 		dev_val_slice_text = Ocr_Utils.perform_ocr(dev_val_slice_image)
+
+		#print(dev_val_slice_text);
+		#cv2.imshow("dev", dev_val_slice_image);
+		#cv2.waitKey();
+
 		tokenized_dev_val_list = dev_val_slice_text.split("\n");
 
 		metric_metadata = {}
@@ -1415,7 +1437,7 @@ class Hvf_Object:
 		# Height: 0.16 -> 0.49
 		# Width: 0.14 -> 0.58
 		y_ratio = 0.16;
-		y_size = 0.33;
+		y_size = 0.36#0.33;
 		x_ratio = 0.14;
 		x_size = 0.44;
 

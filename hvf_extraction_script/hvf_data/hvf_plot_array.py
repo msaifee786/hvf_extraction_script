@@ -195,9 +195,11 @@ class Hvf_Plot_Array:
 		# Get resource directory - get loader, then cleave off __init__.py
 		resource_module_dir, _ = os.path.split(pkgutil.get_loader("hvf_extraction_script.hvf_data.other_icons").get_filename());
 
-		triangle_icon_template_path = os.path.join(resource_module_dir, 'icon_triangle.PNG');
+		triangle_icon_v1_template_path = os.path.join(resource_module_dir, 'icon_triangle_v1.PNG');
+		triangle_icon_v2_template_path = os.path.join(resource_module_dir, 'icon_triangle_v2.PNG');
 
-		cls.triangle_icon_template = cv2.cvtColor(File_Utils.read_image_from_file(triangle_icon_template_path), cv2.COLOR_BGR2GRAY);
+		cls.triangle_icon_template_v1 = cv2.cvtColor(File_Utils.read_image_from_file(triangle_icon_v1_template_path), cv2.COLOR_BGR2GRAY);
+		cls.triangle_icon_template_v2 = cv2.cvtColor(File_Utils.read_image_from_file(triangle_icon_v2_template_path), cv2.COLOR_BGR2GRAY);
 
 		# Lastly, flip the flag to indicate initialization has been done
 		cls.is_initialized = True;
@@ -492,13 +494,16 @@ class Hvf_Plot_Array:
 	# high enough certainty
 	# Only to be called with raw plots
 	@staticmethod
-	def find_and_delete_triangle_icon(plot_image):
+	def find_and_delete_triangle_icon(plot_image, triangle_version):
 		TRIANGLE_TO_PLOT_RATIO_W = 0.0305
 
 		THRESHOLD_MATCH = 0.6;
 
 		# First, copy and resize the template icon:
-		triangle_icon = Hvf_Plot_Array.triangle_icon_template.copy();
+		if (triangle_version == "v1"):
+			triangle_icon = Hvf_Plot_Array.triangle_icon_template_v1.copy();
+		else: #if v2
+			triangle_icon = Hvf_Plot_Array.triangle_icon_template_v2.copy();
 
 		scale_factor = (np.size(plot_image, 1)*TRIANGLE_TO_PLOT_RATIO_W)/np.size(triangle_icon, 1);
 
@@ -546,8 +551,41 @@ class Hvf_Plot_Array:
 
 			cv2.rectangle(plot_image,top_left,(x_end, row_index),(255), -1)
 			#cv2.rectangle(plot_image,max_loc,(x_end, row_index),(0), 1)
+
+			return True;
 		else:
 			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_INFO, "Did not find triangle icon, matching value " + str(max_val));
+
+			return False;
+
+
+	###############################################################################
+	# Given a plot, deletes the plot axes
+	@staticmethod
+	def delete_plot_axes(plot_image):
+
+		w = np.size(plot_image, 1);
+		h = np.size(plot_image, 0);
+
+		# Mask out all but central ~5% of horizontal and vertical, to prepare to
+		# remove axes_size
+		mask = np.zeros((h, w,1), np.uint8);
+		mask = np.full(plot_image.shape, 255, np.uint8)
+
+		# Draw axes in the middle (to allow mask to match template on)
+		cv2.line(mask, (int(w/2), 0), (int(w/2), h), (0), int(w*0.03));
+		cv2.line(mask, (0, int(h/2)), (w, int(h/2)), (0), int(h*0.03));
+
+
+		# Mask out all but central 5%:
+		masked_axes = cv2.bitwise_or(plot_image, mask)
+
+		masked_axes = Image_Utils.delete_stray_marks(masked_axes, 0.0001, 0.001);
+
+		return_image = cv2.bitwise_or(cv2.bitwise_not(masked_axes), plot_image);
+
+		return return_image;
+
 
 	###############################################################################
 	# Given a plot image (axes deleted), returns an array of dimension fractions
@@ -767,7 +805,8 @@ class Hvf_Plot_Array:
 
 		# Delete triangle icon, if we can find it:
 		if (plot_type == Hvf_Plot_Array.PLOT_RAW):
-			Hvf_Plot_Array.find_and_delete_triangle_icon(plot_image);
+			if not (Hvf_Plot_Array.find_and_delete_triangle_icon(plot_image, "v1")):
+				Hvf_Plot_Array.find_and_delete_triangle_icon(plot_image, "v2");
 
 		# Mask out corners:
 		corner_mask = Hvf_Plot_Array.generate_corner_mask(plot_width, plot_height);
@@ -783,20 +822,9 @@ class Hvf_Plot_Array:
 		elif (icon_type == Hvf_Plot_Array.PLOT_VALUE):
 			plot_values_array = np.zeros((NUM_CELLS_COL, NUM_CELLS_ROW), dtype=Hvf_Value);
 
-		# We can also eliminate the grid axes/lines because we don't need them anymore, and
-		# they will make the image detection harder
-		# Just draw white lines along the axes
-		# Depending on type of plot, we need a thicker line to cover up the axes
-		# (raw needs thicker because they have axis markers, everything else needs thinner)
-		axes_size = 0;
-		if (plot_type == Hvf_Plot_Array.PLOT_RAW):
-			axes_size = 0.03
-		else:
-			axes_size = 0.0135
+		plot_image = Hvf_Plot_Array.delete_plot_axes(plot_image);
 
-		cv2.line(plot_image, (int(plot_width/2), 0), (int(plot_width/2), plot_height), (255), max(int(plot_width*axes_size), 1));
-		cv2.line(plot_image, (0, int(plot_height/2)), (plot_width, int(plot_height/2)), (255), max(int(plot_height*axes_size), 1));
-
+		
 		# Grab the grid lines:
 		grid_line_dict = Hvf_Plot_Array.get_plot_grid_lines(plot_image, plot_type, icon_type);
 
@@ -805,15 +833,18 @@ class Hvf_Plot_Array:
 		# Debug code - draws out slicing for the elements on the plot:
 		for c in range(Hvf_Plot_Array.NUM_OF_PLOT_COLS+1):
 			x = int(grid_line_dict['col_list'][c]*plot_width)
-			cv2.line(plot_image_debug_copy, (x, 0), (x, plot_height), (0), 1);
+			#cv2.line(plot_image_debug_copy, (x, 0), (x, plot_height), (0), 1);
 
 		for r in range (Hvf_Plot_Array.NUM_OF_PLOT_ROWS+1):
 			y = int(grid_line_dict['row_list'][r]*plot_height)
-			cv2.line(plot_image_debug_copy, (0, y), (plot_width, y), (0), 1);
+			#cv2.line(plot_image_debug_copy, (0, y), (plot_width, y), (0), 1);
 
 		# Debug function for showing the plot:
 		show_plot_func = (lambda : cv2.imshow("plot " + icon_type, plot_image_debug_copy))
 		Logger.get_logger().log_function(Logger.DEBUG_FLAG_DEBUG, show_plot_func);
+
+		#cv2.imshow("plot " + icon_type, plot_image_debug_copy)
+		#cv2.waitKey();
 
 		# We iterate through our array, then slice out the appropriate cell from the plot
 		for x in range(0, NUM_CELLS_COL):

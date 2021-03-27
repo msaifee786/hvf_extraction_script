@@ -210,10 +210,30 @@ For example, to query for a specific value:
   '-5.54'
 >>> hvf_obj.metadata[Hvf_Object.KEYLABEL_VFI]
   '87%'
->>> hvf_obj.raw_value_array.plot_array[0,0].get_value()
-  -99 # the top-left corner value [0,0] is always blank - Hvf_Value.VALUE_NO_VALUE
->>> hvf_obj.raw_value_array.plot_array[0,0].get_display_string()
-  ' '
+>>> print(hvf_obj.get_display_raw_val_plot_string())
+  Raw Value Plot:
+
+
+             23  24  28  25            
+
+         29  29  28  29  29  28        
+
+     27  27  29  29  29  29  27  25    
+
+     29  27  30  31  27  27  27  27  23
+
+     29   0  27  32  30  28  15  11  <0
+
+     26  27  25  30  31  28   0  <0    
+
+         29  27  27  15   2  <0        
+
+             26  26  23   0            
+
+>>> hvf_obj.raw_value_array.plot_array[7,7].get_value()
+  -97 # In above plot, refers to <0 - value is Hvf_Value.VALUE_BELOW_THRESHOLD
+>>> hvf_obj.raw_value_array.plot_array[7,7].get_display_string()
+  '<0'
 >>> hvf_obj.pat_dev_percentile_array.plot_array[4,4].get_enum()
   1 # Enum value for Hvf_Perc_Icon.PERC_NORMAL
 >>> hvf_obj.pat_dev_percentile_array.plot_array[4,4].get_display_string()

@@ -249,6 +249,12 @@ class Hvf_Perc_Icon:
 		# What is the total plot size?
 		plot_area = np.size(plot_element, 0) * np.size(plot_element, 1);
 
+		# Delete stray marks; filters out specks based on size compared to global element
+		# and relative to largest contour
+		plot_threshold = 0.005
+		relative_threshold = 0.005
+		plot_element = Image_Utils.delete_stray_marks(plot_element, plot_threshold, relative_threshold)
+
 		# First, crop the white border out of the element to get just the core icon:
 		x0, x1, y0, y1 = Image_Utils.crop_white_border(plot_element);
 

@@ -297,62 +297,6 @@ class Hvf_Value:
 		x,y,w,h = cv2.boundingRect(c);
 		return w;
 
-
-	###############################################################################
-	# Given a plot element, masks out contours of a certain size or smaller (based
-	# on fraction of total plot element or relative to largest contour)
-	@staticmethod
-	def delete_stray_marks(plot_element, plot_threshold, relative_threshold):
-
-		# Threshold by area when to remove a contour:
-		plot_area = np.size(plot_element, 0) * np.size(plot_element, 1);
-
-		plot_element_temp = cv2.bitwise_not(plot_element.copy());
-		cnts, hierarchy = cv2.findContours(plot_element_temp, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-		mask = np.ones(plot_element_temp.shape[:2], dtype="uint8") * 255
-
-
- 		# We want to eliminate small contours. Define relative to entire plot area and/or
- 		# relative to largest contour
-		cnts = sorted(cnts, key = Hvf_Value.contour_bound_box_area, reverse = True);
-
-		largest_contour_area = 0;
-
-		if (len(cnts) > 0):
-			largest_contour_area = Hvf_Value.contour_bound_box_area(cnts[0]);
-
-
-		contours_to_mask = [];
-
-		# Loop over the contours
-		Logger.get_logger().log_msg(Logger.DEBUG_FLAG_DEBUG, "Looping through contours, length " + str(len(cnts)));
-		for c in cnts:
-
-			# Grab size of contour:
-			# Can also consider using cv2.contourArea(cnt);
-			contour_area = Hvf_Value.contour_bound_box_area(c);
-			contour_plot_size_fraction = contour_area/plot_area
-			contour_relative_size_fraction = contour_area/largest_contour_area;
-
-			Logger.get_logger().log_msg(Logger.DEBUG_FLAG_DEBUG, "Contour plot size fraction: " + str(contour_plot_size_fraction) + "; contour relative size fraction: " + str(contour_relative_size_fraction));
-
-			# if the contour is too small, draw it on the mask
-			if (contour_plot_size_fraction < plot_threshold or contour_relative_size_fraction < relative_threshold):
-				Logger.get_logger().log_msg(Logger.DEBUG_FLAG_DEBUG, "Found a small contour, masking out");
-				contours_to_mask.append(c);
-
-
-		cv2.drawContours(mask, contours_to_mask, -1, 0, -1)
-
-
-
-
-		# remove the contours from the image
-		plot_element = cv2.bitwise_not(cv2.bitwise_and(plot_element_temp, plot_element_temp, mask=mask));
-
-		return plot_element;
-
-
 	###############################################################################
 	# Given a plot element, finds number of contours
 	@staticmethod
@@ -633,9 +577,8 @@ class Hvf_Value:
 			plot_threshold = 0.005
 			relative_threshold = 0.01
 
-
-		plot_element = Hvf_Value.delete_stray_marks(plot_element, plot_threshold, relative_threshold)
-		plot_element_backup = Hvf_Value.delete_stray_marks(plot_element_backup, plot_threshold, relative_threshold)
+		plot_element = Image_Utils.delete_stray_marks(plot_element, plot_threshold, relative_threshold)
+		plot_element_backup = Image_Utils.delete_stray_marks(plot_element_backup, plot_threshold, relative_threshold)
 
 		# Now, crop out the borders so we just have the central values - this allows us
 		# to standardize size
