@@ -173,6 +173,7 @@ class Hvf_Object:
 	HVF_LAYOUT_DICOM = "dicom"
 	HVF_LAYOUT_V1 = "v1";
 	HVF_LAYOUT_V2 = "v2";
+	HVF_LAYOUT_V2_GPA = "v2_gpa";
 	HVF_LAYOUT_V3 = "v3";
 
 
@@ -233,7 +234,7 @@ class Hvf_Object:
 		layout_version = Hvf_Object.find_image_layout_version(hvf_image_gray, width);
 
 		# Get absolute raw value plot:
-		raw_value_array = cls.get_abs_raw_val_plot(hvf_image_gray);
+		raw_value_array = cls.get_abs_raw_val_plot(hvf_image_gray, layout_version);
 
 		# Get deviation value plots (both absolute and pattern):
 		abs_dev_value_array = cls.get_abs_deviation_val_plot(hvf_image_gray);
@@ -831,18 +832,15 @@ class Hvf_Object:
 
 
 	###############################################################################
-	# Given a full image, determines what type of layout it is (v1 vs v2).
+	# Given a full image, determines what type of layout it is
 	# Implementation: simply looks for "Date of Birth" in top right header -> if
-	# found, then v2, otherwise v1
+	# found, then v3. If not, and low res, v1; otherwise v2
 	# Searching done by regex and fuzzy matching
 	# Likely will need to be improved in future
 	@staticmethod
 	def find_image_layout_version(hvf_image, width):
 
-		return_version = Hvf_Object.HVF_LAYOUT_V2;
-
-		if (width < 1400):
-			return_version = Hvf_Object.HVF_LAYOUT_V1;
+		# Perform some pre-processing:
 
 		# Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
 		header_slice = Image_Utils.slice_image(hvf_image, 0, 0.15, 0, 0.31)
@@ -852,6 +850,20 @@ class Hvf_Object:
 
 		if (partial_fuzz_score > 50):
 			return_version = Hvf_Object.HVF_LAYOUT_V3;
+		elif (width < 1400):
+			return_version = Hvf_Object.HVF_LAYOUT_V1;
+		else:
+			# Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
+
+			gpa_slice = Image_Utils.slice_image(hvf_image, 0.28, 0.45, 0.60, 0.40)
+			gpa_text = Ocr_Utils.perform_ocr(gpa_slice);
+
+			partial_fuzz_score = fuzz.partial_ratio("See GPA printout", gpa_text);
+
+			if (partial_fuzz_score > 50):
+				return_version = Hvf_Object.HVF_LAYOUT_V2_GPA;
+			else:
+				return_version = Hvf_Object.HVF_LAYOUT_V2;
 
 		return return_version;
 
@@ -951,7 +963,7 @@ class Hvf_Object:
 		header_text_middle = "";
 
 		# For simiplicity, just combine all into same text string for analysi
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2) or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA):
 
 			# Header 2 slice:
 			# Height: 0.0 -> 0.17
@@ -1041,7 +1053,7 @@ class Hvf_Object:
 		# metadata entries in different ways if we fail
 
 		# ===== NAME/ID DETECTION =====
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2) or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA):
 			field, tokenized_header1_list = Regex_Utils.fuzzy_regex('Name: ', tokenized_header1_list);
 			hvf_metadata[Hvf_Object.KEYLABEL_NAME] = field;
 
@@ -1059,7 +1071,7 @@ class Hvf_Object:
 			hvf_metadata[Hvf_Object.KEYLABEL_NAME] = field;
 
 		# ===== DOB DETECTION =====
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2) or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA):
 			field, tokenized_header4_list = Regex_Utils.fuzzy_regex('DOB: ', tokenized_header4_list);
 			field = Regex_Utils.remove_spaces(field);
 			field = Regex_Utils.remove_non_numeric(field, ['-', '/']);
@@ -1071,7 +1083,7 @@ class Hvf_Object:
 
 		# ===== TEST DATE DETECTION =====
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2) or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA):
 			field, tokenized_header4_list = Regex_Utils.fuzzy_regex('Date: ', tokenized_header4_list);
 			field = Regex_Utils.remove_spaces(field);
 
@@ -1081,7 +1093,7 @@ class Hvf_Object:
 		hvf_metadata[Hvf_Object.KEYLABEL_TEST_DATE] = field;
 
 		# ===== LATERALITY DETECTION =====
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2) or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA):
 			field, tokenized_header4_list = Regex_Utils.fuzzy_regex('Eye: ', tokenized_header4_list);
 
 			# We know laterality can only be 'Left' or 'Right' - fuzzy match against each to
@@ -1149,7 +1161,7 @@ class Hvf_Object:
 		hvf_metadata[Hvf_Object.KEYLABEL_FALSE_NEG] = field;
 
 		# ===== FIELD SIZE DETECTION =====
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2) or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA):
 			source_string_list = tokenized_header1_list
 		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
 			source_string_list = tokenized_header4_list
@@ -1232,7 +1244,7 @@ class Hvf_Object:
 
 		# If V1 layout, need to clean up:
 
-		if ((layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2)) and not (field == Regex_Utils.REGEX_FAILURE):
+		if ((layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2) or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA)) and not (field == Regex_Utils.REGEX_FAILURE):
 			# Construct regex to extract the value
 			#print("Prelim rx: " + field)
 			regexp = '(.*)[DO]S (.*)[DO0]C [XxK]*\s*(\d*){e<=1}';
@@ -1302,6 +1314,10 @@ class Hvf_Object:
 			# Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
 			dev_val_slice_image = Image_Utils.slice_image(hvf_image_gray, 0.45, 0.2, 0.65, 0.35)
 
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA):
+			# Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
+			dev_val_slice_image = Image_Utils.slice_image(hvf_image_gray, 0.19, 0.1, 0.60, 0.40)
+
 		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
 			# Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
 			dev_val_slice_image = Image_Utils.slice_image(hvf_image_gray, 0.5, 0.15, 0.65, 0.35)
@@ -1321,7 +1337,7 @@ class Hvf_Object:
 		metric_metadata = {}
 
 		# ===== MD/PSD/VFI DETECTION =====
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2) or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA):
 			field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field('MD dB', 'MD\s*(.*)dB{e<=2}', tokenized_dev_val_list);
 
 		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
@@ -1339,7 +1355,7 @@ class Hvf_Object:
 
 		metric_metadata[Hvf_Object.KEYLABEL_MD] = field;
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2) or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA):
 			field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field('PSD dB', 'PSD\s*(.*)dB{e<=2}', tokenized_dev_val_list);
 
 		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
@@ -1355,7 +1371,7 @@ class Hvf_Object:
 
 		metric_metadata[Hvf_Object.KEYLABEL_PSD] = field;
 
-		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2):
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V1) or (layout_version == Hvf_Object.HVF_LAYOUT_V2) or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA):
 			field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field('VFI', 'VFI\s*(.*)%{e<=2}', tokenized_dev_val_list);
 
 		if (layout_version == Hvf_Object.HVF_LAYOUT_V3):
@@ -1428,7 +1444,7 @@ class Hvf_Object:
 	###############################################################################
 	# Get absolute raw value plot:
 	@staticmethod
-	def get_abs_raw_val_plot(hvf_image_gray):
+	def get_abs_raw_val_plot(hvf_image_gray, layout_version):
 		# Slice, then call a common func 'get_plot'
 
 		# Slice out percentile pattern deviation plot:
@@ -1436,10 +1452,18 @@ class Hvf_Object:
 		# These ratios are all found empirically from the HVF printout
 		# Height: 0.16 -> 0.49
 		# Width: 0.14 -> 0.58
-		y_ratio = 0.16;
-		y_size = 0.36#0.33;
-		x_ratio = 0.14;
-		x_size = 0.44;
+
+		if (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA):
+			y_ratio = 0.16;
+			y_size = 0.36#0.33;
+			x_ratio = 0.0;
+			x_size = 0.35;
+
+		else:
+			y_ratio = 0.16;
+			y_size = 0.36#0.33;
+			x_ratio = 0.14;
+			x_size = 0.44;
 
 		plot_type = Hvf_Plot_Array.PLOT_RAW;
 		icon_type = Hvf_Plot_Array.PLOT_VALUE;
