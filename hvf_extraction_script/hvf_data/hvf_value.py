@@ -33,6 +33,7 @@ from PIL import Image
 from functools import reduce
 
 import pkgutil
+import random
 
 # Import some of our own written modules:
 
@@ -104,7 +105,6 @@ class Hvf_Value:
 		self.value = value;
 		self.raw_image = image_slice;
 
-
 	###############################################################################
 	# Factory method - given an image slice, returns a value corresponding to the
 	# image
@@ -171,7 +171,7 @@ class Hvf_Value:
 
 		# Iterate through the icon folders:
 
-		module_list = ["hvf_extraction_script.hvf_data.value_icons.v1", "hvf_extraction_script.hvf_data.value_icons.v2"]
+		module_list = ["hvf_extraction_script.hvf_data.value_icons.v0", "hvf_extraction_script.hvf_data.value_icons.v1", "hvf_extraction_script.hvf_data.value_icons.v2"]
 
 		for module in module_list:
 
@@ -467,6 +467,7 @@ class Hvf_Value:
 		best_val = None;
 		best_loc = None;
 		best_scale_factor = None;
+		best_dir = None;
 
 		height = np.size(plot_element, 0)
 		width = np.size(plot_element, 1)
@@ -523,27 +524,54 @@ class Hvf_Value:
 					best_val = ii;
 					best_loc = max_loc;
 					best_scale_factor = scale_factor;
-
+					best_dir = dir;
 		# TODO: refine specific cases that tend to be misclassified
 
 		# 1 vs 4
 		if (best_val == 4 or best_val == 1):
 
-			# Cut number in half and take bottom half -> find contours
-			# If width of contour is most of element --> 4
-			# otherwise, 1
+			if (best_dir == "v0"):
 
-			bottom_half = Image_Utils.slice_image(plot_element, 0.5, 0.5, 0, 1);
+				# Cut number in half and take bottom half -> find contours
+				# If width of contour is most of element --> 4
+				# otherwise, 1
 
-			cnts, hierarchy = cv2.findContours(cv2.bitwise_not(bottom_half.copy()), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+				bottom_half = Image_Utils.slice_image(plot_element, 0.50, 0.25, 0, 1);
 
-			# Sort contours by width
-			largest_contour = sorted(cnts, key = Hvf_Value.contour_width, reverse = True)[0];
+				cnts, hierarchy = cv2.findContours(cv2.bitwise_not(bottom_half.copy()), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-			if (Hvf_Value.contour_width(largest_contour) > width*0.8):
-				best_val = 4;
-			else:
-				best_val = 1;
+				# Sort contours by width
+				sorted_contours = sorted(cnts, key = Hvf_Value.contour_width, reverse = True)
+				#largest_contour = sorted(cnts, key = Hvf_Value.contour_width, reverse = True)[0];
+
+				if (len(sorted_contours) > 0):
+
+					if (Hvf_Value.contour_width(sorted_contours[0]) > width*0.8):
+						best_val = 4;
+					else:
+						best_val = 1;
+
+			if ((best_dir == "v1") or (best_dir == "v2")):
+				# Cut number in half and take bottom half -> find contours
+				# If width of contour is most of element --> 4
+				# otherwise, 1
+
+				bottom_half = Image_Utils.slice_image(plot_element, 0.50, 0.50, 0, 1);
+
+				cnts, hierarchy = cv2.findContours(cv2.bitwise_not(bottom_half.copy()), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+				# Sort contours by width
+				sorted_contours = sorted(cnts, key = Hvf_Value.contour_width, reverse = True)
+				#largest_contour = sorted(cnts, key = Hvf_Value.contour_width, reverse = True)[0];
+
+				if (len(sorted_contours) > 0):
+
+					if (Hvf_Value.contour_width(sorted_contours[0]) > width*0.8):
+						best_val = 4;
+					else:
+						best_val = 1;
+
+		Logger.get_logger().log_msg(Logger.DEBUG_FLAG_DEBUG, "Best match {}, best dir {}".format(best_val, best_dir));
 
 		return best_val, best_loc, best_scale_factor, best_match;
 

@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="hvf_extraction_script",
-    version="0.0.2",
+    version="0.0.4",
     author="Murtaza Saifee",
     author_email="saifeeapps@gmail.com",
     description="Python extraction script for HVF report images",
@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/msaifee786/hvf_extraction_script",
     packages=setuptools.find_packages(),
-    package_data={'hvf_extraction_script': ['hvf_data/other_icons/*.PNG', 'hvf_data/perc_icons/*.JPG', 'hvf_data/value_icons/v1/*.PNG', 'hvf_data/value_icons/v2/*.PNG']},
+    package_data={'hvf_extraction_script': ['hvf_data/other_icons/*.PNG', 'hvf_data/perc_icons/*.JPG', 'hvf_data/value_icons/v0/*.PNG', 'hvf_data/value_icons/v1/*.PNG', 'hvf_data/value_icons/v2/*.PNG']},
     install_requires=[
           'tesserOCR',
           'regex',
