@@ -33,7 +33,7 @@ class Image_Utils:
     ###############################################################################
     # Preprocessing image to enhance image quality
     @staticmethod
-    def preprocess_image(image, debug=False):
+    def preprocess_image(image, debug_dir=""):
 
         # Look up how to optimize/preprocess images for tesseract - this is a common issue
 
@@ -46,12 +46,12 @@ class Image_Utils:
         # Thresholding:
         # image = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY)[1];
 
-        # This works out to best best preprocess - esp for photo images that have variable
+        # This works out to best preprocess - esp for photo images that have variable
         # lighting
         image = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
 
-        if debug:
-            out = Regex_Utils.temp_out()
+        if debug_dir:
+            out = Regex_Utils.temp_out(debug_dir=debug_dir)
             img_pil = Image.fromarray(image)
             img_pil.save(f"{out}.jpg")
 
@@ -94,14 +94,14 @@ class Image_Utils:
 
         # Find bounding ys:
         for row_index in range(0, np.size(image, 0)):
-            if reduce((lambda x, y: x and y), element_mask[row_index, :]) == True:  # All white row
+            if reduce((lambda x, y: x and y), element_mask[row_index, :]) is True:  # All white row
                 y0 = row_index
                 continue
             else:  # We have at least 1 black pixel - stop
                 break
 
         for row_index in range(np.size(image, 0) - 1, 0, -1):
-            if reduce((lambda x, y: x and y), element_mask[row_index, :]) == True:  # All white row
+            if reduce((lambda x, y: x and y), element_mask[row_index, :]) is True:  # All white row
                 y1 = row_index
                 continue
             else:  # We have at least 1 black pixel - stop
@@ -109,14 +109,14 @@ class Image_Utils:
 
         # Find bounding xs:
         for col_index in range(0, np.size(image, 1)):
-            if reduce((lambda x, y: x and y), element_mask[:, col_index]) == True:  # All white row
+            if reduce((lambda x, y: x and y), element_mask[:, col_index]) is True:  # All white row
                 x0 = col_index
                 continue
             else:  # We have at least 1 black pixel - stop
                 break
 
         for col_index in range(np.size(image, 1) - 1, 0, -1):
-            if reduce((lambda x, y: x and y), element_mask[:, col_index]) == True:  # All white row
+            if reduce((lambda x, y: x and y), element_mask[:, col_index]) is True:  # All white row
                 x1 = col_index
                 continue
             else:  # We have at least 1 black pixel - stop
@@ -185,7 +185,7 @@ class Image_Utils:
         return image
 
     ###############################################################################
-    # Given a image, determines width of axis (assume crosshairs plot centered in image)
+    # Given a image, determines width of axis (assume cross hairs plot centred in image)
     # Assumes image is black and white binarized
     @staticmethod
     def measure_plot_axis_width(image, is_x_axis):

@@ -39,11 +39,11 @@ class Ocr_Utils:
     # Given an image, preprocesses it and pulls OCR text out of it
     # Uses pytesseract. Assumes input is in a Numpy/openCV image format
     @staticmethod
-    def perform_ocr(img, proc_img: bool = True, debug: bool = False) -> str:
+    def perform_ocr(img, proc_img: bool = True, debug_dir: str = "") -> str:
 
         if proc_img:
             # First, preprocessor the image:
-            img = Image_Utils.preprocess_image(img, debug=debug)
+            img = Image_Utils.preprocess_image(img, debug_dir=debug_dir)
 
         # Next, convert image to python PIL (because pytesseract using PIL):
         img_pil = Image.fromarray(img)
@@ -55,8 +55,8 @@ class Ocr_Utils:
         Ocr_Utils.OCR_API_HANDLE.SetImage(img_pil)
         text: str = Ocr_Utils.OCR_API_HANDLE.GetUTF8Text()
 
-        if debug:
-            out = Regex_Utils.temp_out()
+        if debug_dir:
+            out = Regex_Utils.temp_out(debug_dir=debug_dir)
             img_pil.save(f"{out}.jpg")
             with open(f"{out}.txt", "w") as f:
                 f.writelines(text)

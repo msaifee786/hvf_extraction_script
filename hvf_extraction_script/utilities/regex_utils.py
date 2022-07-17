@@ -8,6 +8,7 @@
 
 # Import necessary packages
 # Import regular expression packages
+import os
 import re
 from glob import glob
 
@@ -77,7 +78,7 @@ class Regex_Utils:
                 best_match_string = string[best_match.start : best_match.end]
 
                 # Construct regex based on this slice
-                regex = best_match_string + "\s*(.*)"
+                regex = best_match_string + r"\s*(.*)"
 
                 try:
                     # Perform the regex search to find the text of interest
@@ -85,7 +86,7 @@ class Regex_Utils:
 
                     ret = output.group(1)
 
-                except:
+                except Exception:
                     print(label + " Failed searches")
                     ret = Regex_Utils.REGEX_FAILURE
 
@@ -137,7 +138,7 @@ class Regex_Utils:
                 try:
                     ret = output.group(1)
 
-                except:
+                except Exception:
                     ret = Regex_Utils.REGEX_FAILURE
 
         return ret, string_list
@@ -188,7 +189,7 @@ class Regex_Utils:
     def add_decimal_if_absent(string):
         if string == Regex_Utils.REGEX_FAILURE:
             return string
-        elif not (re.search("(\.)", string) and len(string) > 2):
+        elif not (re.search(r"(\.)", string) and len(string) > 2):
 
             i = len(string) - 2
 
@@ -198,17 +199,19 @@ class Regex_Utils:
 
     ###############################################################################
     # Clean minus sign. Condense any similar-looking prefixes into a single minus sign
+    @staticmethod
     def clean_minus_sign(string):
         if string == Regex_Utils.REGEX_FAILURE:
             return string
         else:
-            string = re.sub("(\=)+", "-", string)
-            string = re.sub("^(\-)+", "-", string)
+            string = re.sub(r"(\=)+", "-", string)
+            string = re.sub(r"^(\-)+", "-", string)
 
         return string
 
     ###############################################################################
     # Clear out non ASCII unicode characters
+    @staticmethod
     def clean_nonascii(string: str) -> str:
         if string == Regex_Utils.REGEX_FAILURE:
             return string
@@ -218,9 +221,10 @@ class Regex_Utils:
         return string
 
     @staticmethod
-    def temp_out(string: str = "debug_pass_") -> str:
+    def temp_out(debug_dir: str = ".", string: str = "debug_pass_") -> str:
         max_val = 0
-        gg = [re.search(r"\d+", x) for x in glob(f"{string}*.*")]
+        string2 = os.path.join(debug_dir, string)
+        gg = [re.search(r"_(\d+)\.", x) for x in glob(f"{string2}*.*")]
         if gg:
-            max_val = max(map(int, [x.group() for x in gg]))
-        return f"{string}{max_val+1}"
+            max_val = max(map(int, [x.group(1) for x in gg]))  # type: ignore
+        return f"{string2}{max_val+1}"

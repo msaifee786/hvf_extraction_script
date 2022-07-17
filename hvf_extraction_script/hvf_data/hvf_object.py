@@ -35,6 +35,7 @@
 ###############################################################################
 
 import json
+import os
 
 import cv2
 import numpy as np
@@ -61,7 +62,6 @@ from hvf_extraction_script.utilities.ocr_utils import Ocr_Utils
 
 # Regex utility functions:
 from hvf_extraction_script.utilities.regex_utils import Regex_Utils
-from PIL import Image
 from tesserocr import PSM, PyTessBaseAPI
 
 # Import some of our own written modules:
@@ -236,9 +236,13 @@ class Hvf_Object:
     # This is the method to call to generate a new HVF object
     # Takes in an OpenCV image object
     @classmethod
-    def get_hvf_object_from_image(cls, hvf_image, debug=False):
+    def get_hvf_object_from_image(cls, hvf_image, debug_dir=""):
 
-        cls.debug = debug
+        if debug_dir:
+            if not os.path.exists(debug_dir):
+                os.mkdir(debug_dir)
+
+        cls.debug_dir = debug_dir
 
         # Initialize any templates/variables if this is first time we are running:
         if cls.is_initialized is False:
@@ -248,8 +252,8 @@ class Hvf_Object:
         # First, need to upscale image if its too low resolution (important for older HVF
         # images). Min width is a bit arbitrary but is close to ~300ppi
         width = np.size(hvf_image, 1)
-        MIN_HVF_WIDTH = 2500
-        WARNING_HVF_WIDTH = 1000
+        MIN_HVF_WIDTH = 2400
+        # WARNING_HVF_WIDTH = 1000
 
         # if (width < WARNING_HVF_WIDTH):
         # Logger.get_logger().log_msg(Logger.DEBUG_FLAG_WARNING, "Resolution low, high risk for detection errors")
@@ -259,11 +263,12 @@ class Hvf_Object:
             hvf_image = cv2.resize(hvf_image, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_CUBIC)
 
         # preprocess image:
-        # Grab grayscale:
+        # Grab greyscale:
         hvf_image_gray = cv2.cvtColor(hvf_image, cv2.COLOR_BGR2GRAY)
 
-        layout_version = cls.find_image_layout_version(hvf_image_gray, width)  # AWSS
-        print(">>> layout_version", layout_version, width)  # AWSS
+        layout_version = cls.find_image_layout_version(hvf_image_gray, width)
+        if debug_dir:
+            print(f">>> layout_version {layout_version}, width {width}")
 
         # Get absolute raw value plot:
         raw_value_array = cls.get_abs_raw_val_plot(hvf_image_gray, layout_version)
@@ -348,7 +353,7 @@ class Hvf_Object:
         # Get list of strings from JSON:
         pat_val_plot_list_by_row = hvf_dict.pop(Hvf_Object.KEYLABEL_PAT_VAL_PLOT)
 
-        # Detect if there is not pattern plot to detect:
+        # Detect if there is no pattern plot to detect:
         if pat_val_plot_list_by_row == Hvf_Object.NO_PATTERN_DETECT:
             pat_val_plot = Hvf_Object.NO_PATTERN_DETECT
         else:
@@ -377,7 +382,7 @@ class Hvf_Object:
         # Get list of strings from JSON:
         pat_perc_plot_list_by_row = hvf_dict.pop(Hvf_Object.KEYLABEL_PAT_PERC_PLOT)
 
-        # Detect if there is not pattern plot to detect:
+        # Detect if there is no pattern plot to detect:
         if pat_perc_plot_list_by_row == Hvf_Object.NO_PATTERN_DETECT:
             pat_perc_plot = Hvf_Object.NO_PATTERN_DETECT
         else:
@@ -422,7 +427,7 @@ class Hvf_Object:
                     continue
 
             if field == "":
-                raise Error
+                raise "Error: get_hvf_object_from_dicom: field empty"
         except Exception:
             field = str(dicom_ds.PatientName)
             field = field.replace("^", ", ")
@@ -473,7 +478,7 @@ class Hvf_Object:
             fp = float(str(dicom_ds.VisualFieldCatchTrialSequence[0].FalsePositivesEstimate))
             fp = str(int(fp)) + "%"
         except Exception:
-            # May be an old HVF, when FP was reported as fraction
+            # It may be an old HVF, when FP was reported as fraction
 
             fp_num = str(dicom_ds.VisualFieldCatchTrialSequence[0].FalsePositivesQuantity)
             fp_den = str(dicom_ds.VisualFieldCatchTrialSequence[0].PositiveCatchTrialsQuantity)
@@ -488,7 +493,7 @@ class Hvf_Object:
             else:
                 fn = str(int(fn)) + "%"
         except Exception:
-            # May be an old HVF, when FN was reported as fraction
+            # It may be an old HVF, when FN was reported as fraction
 
             fn_num = str(dicom_ds.VisualFieldCatchTrialSequence[0].FalseNegativesQuantity)
             fn_den = str(dicom_ds.VisualFieldCatchTrialSequence[0].NegativeCatchTrialsQuantity)
@@ -618,8 +623,8 @@ class Hvf_Object:
 
         # Now, extract plot data. Data is listed by degrees of VF, so have to
         # calculate out plot index from it
-        # 24-2 and 30-2 - 6 degrees apart, centered around 3/-3. Starting edge is -27.
-        # 10-2 - 2 degrees apart, centered around 1/-1. Starting edge is -9
+        # 24-2 and 30-2 - 6 degrees apart, centred around 3/-3. Starting edge is -27.
+        # 10-2 - 2 degrees apart, centred around 1/-1. Starting edge is -9
         starting_degree = 0
         step_size = 0
 
@@ -818,21 +823,21 @@ class Hvf_Object:
         return
 
     ###############################################################################
-    # Serializes hvf object - outputs a string to be saved to a file (ie serialization)
+    # Serializes hvf object - outputs a string to be saved to a file (i.e. serialization)
     # Allow HVF processing to be saved for quick reading
     # Delimit everything by same character
     def serialize_to_json(self):
 
         # We essentially create a large dictionary of all the pertinent info, then
         # convert to JSON
-        # For ease/reliability of behavior, we convert the arrays to strings and
+        # For ease/reliability of behaviour, we convert the arrays to strings and
         # store in the dictionary
 
         # Make a copy of the dict because we'll be adding new items:
         serialize_dict = self.metadata.copy()
 
         # Add the abs and pattern value deviation plots:
-        # We make an list of strings corresponding to the plot row (ease of readability)
+        # We make a list of strings corresponding to the plot row (ease of readability)
 
         # Store the row string lists in the serialization dict:
         serialize_dict[Hvf_Object.KEYLABEL_RAW_VAL_PLOT] = self.raw_value_array.get_display_string_list(
@@ -896,7 +901,7 @@ class Hvf_Object:
         return title + content_string
 
     ###############################################################################
-    # Outputs the entire object's data as a typeset pretty sring
+    # Outputs the entire object's data as a typeset pretty string
     def get_pretty_string(self):
         ret_string = ""
 
@@ -960,7 +965,7 @@ class Hvf_Object:
     ###############################################################################
     # Given a full image, determines what type of layout it is
     # Implementation: simply looks for "Date of Birth" in top right header -> if
-    # found, then v3. If not, and low res, v1; otherwise v2
+    # found, then v3. If not, and low resolution, v1; otherwise v2
     # Searching done by regex and fuzzy matching
     # Likely will need to be improved in future
     @staticmethod
@@ -972,13 +977,8 @@ class Hvf_Object:
         header_slice = Image_Utils.slice_image(hvf_image, 0, 0.15, 0, 0.31)
 
         Ocr_Utils.OCR_API_HANDLE = PyTessBaseAPI(psm=PSM.SPARSE_TEXT_OSD)
-        header_text = Ocr_Utils.perform_ocr(header_slice, proc_img=True, debug=Hvf_Object.debug)  # AWSS
+        header_text = Ocr_Utils.perform_ocr(header_slice, proc_img=True, debug_dir=Hvf_Object.debug_dir)
         Ocr_Utils.OCR_API_HANDLE = None
-        if Hvf_Object.debug:
-            tmp_img = Image.fromarray(header_slice)
-            tmp_img.save("debug_header_slice.jpg")
-            with open("debug_header_slice.txt", "w") as f:
-                f.writelines(header_text)
 
         partial_fuzz_score = fuzz.partial_ratio("Date of Birth", header_text)
 
@@ -990,7 +990,7 @@ class Hvf_Object:
             # Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
 
             gpa_slice = Image_Utils.slice_image(hvf_image, 0.28, 0.45, 0.60, 0.40)
-            gpa_text = Ocr_Utils.perform_ocr(gpa_slice, debug=Hvf_Object.debug)
+            gpa_text = Ocr_Utils.perform_ocr(gpa_slice, debug_dir=Hvf_Object.debug_dir)
 
             partial_fuzz_score = fuzz.partial_ratio("See GPA printout", gpa_text)
 
@@ -1083,10 +1083,10 @@ class Hvf_Object:
 
         # Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
         header_slice_image1 = Image_Utils.slice_image(hvf_image_gray, 0, 0.27, 0, 0.33)
-        header_text1 = Ocr_Utils.perform_ocr(header_slice_image1, debug=Hvf_Object.debug)
+        header_text1 = Ocr_Utils.perform_ocr(header_slice_image1, debug_dir=Hvf_Object.debug_dir)
         metadata_text = metadata_text + "\n" + header_text1
 
-        # The middle headers layout depends on layout type:
+        # The middle header layout depends on layout type:
         # 	In layout 1, has 2 middle headers (header 2 and 3)
         # 		2: Stimulus, background, Strategy
         # 		3: Pupil diameter, acuity, Rx
@@ -1107,15 +1107,15 @@ class Hvf_Object:
             # Contains: Stimulus, background, and strategy
             # Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
             header_slice_image2 = Image_Utils.slice_image(hvf_image_gray, 0, 0.27, 0.31, (0.547 - 0.31))
-            header_text2 = Ocr_Utils.perform_ocr(header_slice_image2, debug=Hvf_Object.debug)
+            header_text2 = Ocr_Utils.perform_ocr(header_slice_image2, debug_dir=Hvf_Object.debug_dir)
 
             # Header 3 slice:
             # Height: 0.0 -> 0.17
-            # Width: 0.52 -> 0.758 (vs 0.83 to overshoot a little given different layout low/high res)
+            # Width: 0.52 -> 0.758 (vs 0.83 to overshoot a little given different layout low/high resolution)
             # Contains: pupil diameter, visual acuity, Rx
             # Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
             header_slice_image3 = Image_Utils.slice_image(hvf_image_gray, 0, 0.27, 0.547, (0.83 - 0.547))
-            header_text3 = Ocr_Utils.perform_ocr(header_slice_image3, debug=Hvf_Object.debug)
+            header_text3 = Ocr_Utils.perform_ocr(header_slice_image3, debug_dir=Hvf_Object.debug_dir)
 
             # print(header_text3);
             # cv2.imshow("rx", header_slice_image3);
@@ -1131,7 +1131,7 @@ class Hvf_Object:
             # Contains: Stimulus, background, and strategy
             # Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
             header_slice_image_middle = Image_Utils.slice_image(hvf_image_gray, 0, 0.25, 0.403, (0.75 - 0.403))
-            header_text_middle = Ocr_Utils.perform_ocr(header_slice_image_middle, debug=Hvf_Object.debug)
+            header_text_middle = Ocr_Utils.perform_ocr(header_slice_image_middle, debug_dir=Hvf_Object.debug_dir)
 
         # Header 4 slice:
         # Height: 0.0 -> 0.17
@@ -1140,7 +1140,7 @@ class Hvf_Object:
 
         # Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
         header_slice_image4 = Image_Utils.slice_image(hvf_image_gray, 0, 0.27, 0.71, (1.0 - 0.71))
-        header_text4 = Ocr_Utils.perform_ocr(header_slice_image4, debug=Hvf_Object.debug)
+        header_text4 = Ocr_Utils.perform_ocr(header_slice_image4, debug_dir=Hvf_Object.debug_dir)
         metadata_text = metadata_text + "\n" + header_text4
 
         hvf_metadata = {}
@@ -1166,7 +1166,7 @@ class Hvf_Object:
         tokenized_header_middle_list = header_text_middle.split("\n")
         tokenized_header4_list = header_text4.split("\n")
 
-        tokenized_metadata_list = metadata_text.split("\n")
+        # tokenized_metadata_list = metadata_text.split("\n")
 
         # print("Header1")
         # print(str(tokenized_header1_list));
@@ -1330,7 +1330,7 @@ class Hvf_Object:
             else:
 
                 # Construct regex to fuzzy extract the value
-                regexp = "(.*)\s*dB{e<=1}"
+                regexp = r"(.*)\s*dB{e<=1}"
 
                 # Perform the regex search to find the text of interest
                 output = regex.search(regexp, field)
@@ -1415,7 +1415,7 @@ class Hvf_Object:
         if not (field == Regex_Utils.REGEX_FAILURE):
 
             # Construct regex to extract the value
-            regexp = "(.*)\s*mm"
+            regexp = r"(.*)\s*mm"
 
             # Perform the regex search to find the text of interest
             output = regex.search(regexp, field)
@@ -1442,7 +1442,7 @@ class Hvf_Object:
         ) and not (field == Regex_Utils.REGEX_FAILURE):
             # Construct regex to extract the value
             # print("Prelim rx: " + field)
-            regexp = "(.*)[DO]S (.*)[DO0]C [XxK]*\s*(\d*){e<=1}"
+            regexp = r"(.*)[DO]S (.*)[DO0]C [XxK]*\s*(\d*){e<=1}"
 
             # Perform the regex search to find the text of interest
             output = regex.search(regexp, field)
@@ -1537,14 +1537,14 @@ class Hvf_Object:
             or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA)
         ):
             field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field(
-                "MD dB", "MD\s*(.*)dB{e<=2}", tokenized_dev_val_list
+                "MD dB", r"MD\s*(.*)dB{e<=2}", tokenized_dev_val_list
             )
 
         if layout_version == Hvf_Object.HVF_LAYOUT_V3:
 
             # Can either be MD<FIELD SIZE> (eg, MD24-2) or MD; regex for optional
             label = "MD{} dB".format(field_size)
-            regex_string = "MD(?:" + field_size + ")?:\s*(.*)dB{e<=2}"
+            regex_string = "MD(?:" + field_size + r")?:\s*(.*)dB{e<=2}"
             field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field(
                 label, regex_string, tokenized_dev_val_list
             )
@@ -1563,14 +1563,14 @@ class Hvf_Object:
             or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA)
         ):
             field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field(
-                "PSD dB", "PSD\s*(.*)dB{e<=2}", tokenized_dev_val_list
+                "PSD dB", r"PSD\s*(.*)dB{e<=2}", tokenized_dev_val_list
             )
 
         if layout_version == Hvf_Object.HVF_LAYOUT_V3:
 
             # Can either be PSD<FIELD SIZE> (eg, PSD24-2) or PSD; regex for optional
             label = "PSD{} dB".format(field_size)
-            regex_string = "PSD(?:" + field_size + ")?:\s*(.*)dB{e<=2}"
+            regex_string = "PSD(?:" + field_size + r")?:\s*(.*)dB{e<=2}"
             field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field(
                 label, regex_string, tokenized_dev_val_list
             )
@@ -1587,12 +1587,14 @@ class Hvf_Object:
             or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA)
         ):
             field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field(
-                "VFI", "VFI\s*(.*)%{e<=2}", tokenized_dev_val_list
+                "VFI", r"VFI\s*(.*)%{e<=2}", tokenized_dev_val_list
             )
 
         if layout_version == Hvf_Object.HVF_LAYOUT_V3:
             field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex("VFI: ", tokenized_dev_val_list)
-            # field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field('VFI', 'VFI:\s*(.*)%{e<=2}', tokenized_dev_val_list);
+            # field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field(
+            #     "VFI", "VFI:\s*(.*)%{e<=2}", tokenized_dev_val_list
+            # )
 
         field = Regex_Utils.clean_punctuation_to_period(field)
         field = Regex_Utils.remove_spaces(field)
