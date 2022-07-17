@@ -252,7 +252,7 @@ class Hvf_Object:
         # First, need to upscale image if its too low resolution (important for older HVF
         # images). Min width is a bit arbitrary but is close to ~300ppi
         width = np.size(hvf_image, 1)
-        MIN_HVF_WIDTH = 2400
+        MIN_HVF_WIDTH = 2500
         # WARNING_HVF_WIDTH = 1000
 
         # if (width < WARNING_HVF_WIDTH):
