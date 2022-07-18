@@ -1587,7 +1587,7 @@ class Hvf_Object:
             or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA)
         ):
             field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field(
-                "VFI", r"VFI\s*(.*)%{e<=2}", tokenized_dev_val_list
+                "VFI", r"VF[Il]\s*(.*)%{e<=2}", tokenized_dev_val_list
             )
 
         if layout_version == Hvf_Object.HVF_LAYOUT_V3:
