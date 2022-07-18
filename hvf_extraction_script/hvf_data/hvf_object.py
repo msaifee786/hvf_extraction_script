@@ -980,9 +980,9 @@ class Hvf_Object:
         header_text = Ocr_Utils.perform_ocr(header_slice, proc_img=True, debug_dir=Hvf_Object.debug_dir)
         Ocr_Utils.OCR_API_HANDLE = None
 
-        partial_fuzz_score = fuzz.partial_ratio("Date of Birth", header_text)
+        partial_fuzz_score = fuzz.partial_ratio("Fixation", header_text)
 
-        if partial_fuzz_score > 50:
+        if partial_fuzz_score < 50:
             return_version = Hvf_Object.HVF_LAYOUT_V3
         elif width < 1200:
             return_version = Hvf_Object.HVF_LAYOUT_V1
@@ -1520,7 +1520,7 @@ class Hvf_Object:
         global_threshold = 0.00001
         relative_threshold = 0.000005
         dev_val_slice_image = Image_Utils.delete_stray_marks(dev_val_slice_image, global_threshold, relative_threshold)
-        dev_val_slice_text = Ocr_Utils.perform_ocr(dev_val_slice_image)
+        dev_val_slice_text = Ocr_Utils.perform_ocr(dev_val_slice_image, debug_dir=Hvf_Object.debug_dir)
 
         # print(dev_val_slice_text);
         # cv2.imshow("dev", dev_val_slice_image);
