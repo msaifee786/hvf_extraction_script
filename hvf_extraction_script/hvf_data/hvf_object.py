@@ -1325,7 +1325,8 @@ class Hvf_Object:
 
         # Detect if OFF or if value; if value, strip dB
         if not (field == Regex_Utils.REGEX_FAILURE):
-            if fuzz.partial_ratio("OFF", field) > 85:
+            offs = ["OFF", "off"]
+            if max([fuzz.partial_ratio(x, field) for x in offs]) > 66:
                 field = "OFF"
             else:
 
@@ -1591,10 +1592,12 @@ class Hvf_Object:
             )
 
         if layout_version == Hvf_Object.HVF_LAYOUT_V3:
-            field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex("VFI: ", tokenized_dev_val_list)
-            # field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field(
-            #     "VFI", "VFI:\s*(.*)%{e<=2}", tokenized_dev_val_list
-            # )
+            # Can either be "VFI<FIELD SIZE>" (eg, VFI24-2) or "VFI"
+            label = "VFI{}".format(field_size)
+            regex_string = "VFI(?:" + field_size + r")?:\s*(.*)"
+            field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field(
+                label, regex_string, tokenized_dev_val_list
+            )
 
         field = Regex_Utils.clean_punctuation_to_period(field)
         field = Regex_Utils.remove_spaces(field)
