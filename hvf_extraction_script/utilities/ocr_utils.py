@@ -53,6 +53,7 @@ class Ocr_Utils:
             # Ocr_Utils.OCR_API_HANDLE = PyTessBaseAPI(psm=PSM.SINGLE_BLOCK)
 
         Ocr_Utils.OCR_API_HANDLE.SetImage(img_pil)
+        Ocr_Utils.OCR_API_HANDLE.SetSourceResolution(200)
         text: str = Ocr_Utils.OCR_API_HANDLE.GetUTF8Text()
 
         if debug_dir:
