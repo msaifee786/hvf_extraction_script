@@ -14,7 +14,6 @@
 # locale.setlocale(locale.LC_ALL, "C")
 # import tesserocr
 
-
 # General purpose image functions:
 from hvf_extraction_script.utilities.image_utils import Image_Utils
 from hvf_extraction_script.utilities.regex_utils import Regex_Utils
