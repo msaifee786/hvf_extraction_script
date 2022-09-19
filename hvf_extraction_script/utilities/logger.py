@@ -2,16 +2,13 @@
 # logger.py
 #
 # Description:
-# 	Class defintion for logger object. Logs error/info/timing messages. To use
+# 	Class definition for logger object. Logs error/info/timing messages. To use
 # 	the logger, just call on the class method get_logger and use that object.
 # 	Do not instantiate your own.
 #
 # 	To Do:
 #
 ###############################################################################
-
-# Import necessary packages
-import sys
 
 # Import some helper packages:
 import math
@@ -72,7 +69,7 @@ class Logger:
     # Function to log any message:
     def log_msg(self, flag_level, msg):
 
-        # Do we need report this?
+        # Do we need to report this?
         if self.should_log(flag_level):
 
             # Grab prefix string:
@@ -91,7 +88,7 @@ class Logger:
     # baseline log level
     def log_function(self, flag_level, func):
 
-        # Do we need call the function?
+        # Do we need to call the function?
         if self.should_log(flag_level):
 
             # Yes - call function

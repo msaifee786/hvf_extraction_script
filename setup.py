@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="hvf_extraction_script",
-    version="0.0.4",
+    version="0.0.7",
     author="Murtaza Saifee",
     author_email="saifeeapps@gmail.com",
     description="Python extraction script for HVF report images",
