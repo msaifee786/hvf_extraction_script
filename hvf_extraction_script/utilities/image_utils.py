@@ -94,14 +94,14 @@ class Image_Utils:
 
         # Find bounding ys:
         for row_index in range(0, np.size(image, 0)):
-            if reduce((lambda x, y: x and y), element_mask[row_index, :]) is True:  # All white row
+            if reduce((lambda x, y: x and y), element_mask[row_index, :]):  # All white row
                 y0 = row_index
                 continue
             else:  # We have at least 1 black pixel - stop
                 break
 
         for row_index in range(np.size(image, 0) - 1, 0, -1):
-            if reduce((lambda x, y: x and y), element_mask[row_index, :]) is True:  # All white row
+            if reduce((lambda x, y: x and y), element_mask[row_index, :]):  # All white row
                 y1 = row_index
                 continue
             else:  # We have at least 1 black pixel - stop
@@ -109,14 +109,14 @@ class Image_Utils:
 
         # Find bounding xs:
         for col_index in range(0, np.size(image, 1)):
-            if reduce((lambda x, y: x and y), element_mask[:, col_index]) is True:  # All white row
+            if reduce((lambda x, y: x and y), element_mask[:, col_index]):  # All white row
                 x0 = col_index
                 continue
             else:  # We have at least 1 black pixel - stop
                 break
 
         for col_index in range(np.size(image, 1) - 1, 0, -1):
-            if reduce((lambda x, y: x and y), element_mask[:, col_index]) is True:  # All white row
+            if reduce((lambda x, y: x and y), element_mask[:, col_index]):  # All white row
                 x1 = col_index
                 continue
             else:  # We have at least 1 black pixel - stop
