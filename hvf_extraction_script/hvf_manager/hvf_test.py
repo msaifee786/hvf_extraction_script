@@ -19,30 +19,18 @@
 #
 ###############################################################################
 
-# Import necessary packages
-import cv2
-import sys
-import argparse
-import difflib
-from shutil import copyfile
 import os
-import numpy as np
 from datetime import datetime
+from shutil import copyfile
 
-# Import logger class to handle any messages:
-from hvf_extraction_script.utilities.logger import Logger
+import cv2
 
-# General purpose file functions:
-from hvf_extraction_script.utilities.file_utils import File_Utils
-
-# Import the HVF_Object class and helper classes
 from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object
 from hvf_extraction_script.hvf_data.hvf_perc_icon import Hvf_Perc_Icon
 from hvf_extraction_script.hvf_data.hvf_value import Hvf_Value
-from hvf_extraction_script.hvf_data.hvf_plot_array import Hvf_Plot_Array
-
-# Import metric calculators:
 from hvf_extraction_script.hvf_manager.hvf_metric_calculator import Hvf_Metric_Calculator
+from hvf_extraction_script.utilities.file_utils import File_Utils
+from hvf_extraction_script.utilities.logger import Logger
 
 
 class Hvf_Test:
@@ -104,8 +92,8 @@ class Hvf_Test:
                 # Check for equality:
                 if not (val.is_equal(exp_val)):
 
-                    exp_val_str = exp_val.get_display_string()
-                    val_str = val.get_display_string()
+                    # exp_val_str = exp_val.get_display_string()
+                    # val_str = val.get_display_string()
 
                     fail_dict = {
                         "test_name": test_name,
@@ -265,10 +253,10 @@ class Hvf_Test:
             ref_data = ref_data.replace("x", "")
             test_data = test_data.replace("x", "")
 
-        except:
+        except Exception:
             ref_data = ref_data
             test_data = test_data
-        bool = ref_data == test_data
+        # bool = ref_data == test_data
         return ref_data == test_data
 
     def compare_fp_fn(ref_data, test_data):
@@ -290,7 +278,7 @@ class Hvf_Test:
                 int(ref_data_list[1]) == int(test_data_list[1])
             )
 
-        except:
+        except Exception:
             bool = ref_data == test_data
 
         return bool
@@ -308,7 +296,7 @@ class Hvf_Test:
             ref_data = float(ref_data)
             test_data = float(test_data)
 
-        except:
+        except Exception:
             ref_data = ref_data
             test_data = test_data
 
@@ -323,7 +311,7 @@ class Hvf_Test:
 
             bool = (ref_rx[0] == test_rx[0]) and (ref_rx[1] == test_rx[1]) and (ref_rx[2] == test_rx[2])
 
-        except:
+        except Exception:
             bool = ref_data == test_data
 
         return bool
@@ -331,7 +319,7 @@ class Hvf_Test:
     def compare_md_psd(ref_data, test_data):
         try:
             bool = float(ref_data) == float(test_data)
-        except:
+        except Exception:
             bool = ref_data == test_data
         return bool
 
@@ -370,7 +358,7 @@ class Hvf_Test:
                     datetime_obj = datetime_obj.replace(year=datetime_obj.year - 100)
 
                 return datetime_obj
-            except:
+            except Exception:
                 continue
 
         return date_string
@@ -393,7 +381,7 @@ class Hvf_Test:
 
             axis = int(axis_array[1])
 
-        except:
+        except Exception:
             cyl = ""
             axis = ""
 
@@ -496,7 +484,7 @@ class Hvf_Test:
             fail_list, fail_string_list = Hvf_Test.compare_plots(test_name, expected, actual)
 
             total_val_count = Hvf_Test.count_val_nonempty_elements(reference_hvf_obj.abs_dev_value_array)
-            total_dev_val_count = total_val_count  ###
+            total_dev_val_count = total_val_count
 
             testing_data_dict["value_plot_vals"] = testing_data_dict["value_plot_vals"] + total_val_count
             testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"] + fail_list
@@ -514,7 +502,7 @@ class Hvf_Test:
             expected = reference_hvf_obj.pat_dev_value_array
 
             # Need to check if pattern plot has been generated, or if fields are too depressed
-            if type(actual.plot_array) == type(expected.plot_array):
+            if isinstance(actual.plot_array) == isinstance(expected.plot_array):
 
                 if actual.is_pattern_not_generated():
 
@@ -561,7 +549,7 @@ class Hvf_Test:
                     }
                     fail_list = [fail_element] * total_val_count
 
-            pat_dev_val_count = total_val_count  ###
+            pat_dev_val_count = total_val_count
             testing_data_dict["value_plot_vals"] = testing_data_dict["value_plot_vals"] + total_val_count
             testing_data_dict["value_plot_errors"] = testing_data_dict["value_plot_errors"] + fail_list
 
@@ -600,7 +588,7 @@ class Hvf_Test:
 
             # Need to check if pattern plot has been generated, or if fields are too depressed
 
-            if type(actual.plot_array) == type(expected.plot_array):
+            if isinstance(actual.plot_array) == isinstance(expected.plot_array):
 
                 if (type(actual.plot_array) == str) and (str(actual.plot_array) == Hvf_Object.NO_PATTERN_DETECT):
 
@@ -648,7 +636,7 @@ class Hvf_Test:
                     }
                     fail_list = [fail_element] * total_val_count
 
-            pat_dev_perc_count = total_val_count  ###;
+            pat_dev_perc_count = total_val_count
             testing_data_dict["perc_plot_vals"] = testing_data_dict["perc_plot_vals"] + total_val_count
             testing_data_dict["perc_plot_errors"] = testing_data_dict["perc_plot_errors"] + fail_list
 
@@ -736,20 +724,20 @@ class Hvf_Test:
     # SINGLE IMAGE TESTING ########################################################
     ###############################################################################
     @staticmethod
-    def test_single_image(hvf_image):
+    def test_single_image(hvf_image, rekognition):
         # Load image
 
         # Set up the logger module:
         debug_level = Logger.DEBUG_FLAG_SYSTEM
         # debug_level = Logger.DEBUG_FLAG_INFO;
-        msg_logger = Logger.get_logger().set_logger_level(debug_level)
+        Logger.get_logger().set_logger_level(debug_level)
 
         # Instantiate hvf object:
         Logger.get_logger().log_time("Single HVF image extraction time", Logger.TIME_START)
-        hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image)
+        hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image, rekognition=rekognition)
 
         debug_level = Logger.DEBUG_FLAG_TIME
-        msg_logger = Logger.get_logger().set_logger_level(debug_level)
+        Logger.get_logger().set_logger_level(debug_level)
 
         Logger.get_logger().log_time("Single HVF image extraction time", Logger.TIME_END)
 
@@ -815,11 +803,11 @@ class Hvf_Test:
 
     # Do unit tests of a specific directory
     @staticmethod
-    def test_unit_tests(sub_dir, test_type):
+    def test_unit_tests(sub_dir, test_type, rekognition):
 
         # Set up the logger module:
         debug_level = Logger.DEBUG_FLAG_ERROR
-        msg_logger = Logger.get_logger().set_logger_level(debug_level)
+        Logger.get_logger().set_logger_level(debug_level)
 
         # Error check to make sure that sub_dir exists
         test_dir_path = os.path.join(Hvf_Test.UNIT_TEST_MASTER_PATH, test_type, sub_dir)
@@ -879,7 +867,7 @@ class Hvf_Test:
                 hvf_image = File_Utils.read_image_from_file(hvf_image_path)
 
                 Logger.get_logger().log_time("Test " + filename_root, Logger.TIME_START)
-                test_hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image)
+                test_hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image, rekognition=rekognition)
                 time_elapsed = Logger.get_logger().log_time("Test " + filename_root, Logger.TIME_END)
 
                 serialization_path = os.path.join(reference_data_path, filename_root + ".txt")
@@ -892,7 +880,7 @@ class Hvf_Test:
                 hvf_image = File_Utils.read_image_from_file(hvf_image_path)
 
                 Logger.get_logger().log_time("Test " + filename_root, Logger.TIME_START)
-                test_hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image)
+                test_hvf_obj = Hvf_Object.get_hvf_object_from_image(hvf_image, rekognition=rekognition)
                 time_elapsed = Logger.get_logger().log_time("Test " + filename_root, Logger.TIME_END)
 
                 dicom_file_path = os.path.join(reference_data_path, filename_root + ".dcm")
@@ -979,14 +967,14 @@ class Hvf_Test:
 
         # Set up the logger module:
         debug_level = Logger.DEBUG_FLAG_ERROR
-        msg_logger = Logger.get_logger().set_logger_level(debug_level)
+        Logger.get_logger().set_logger_level(debug_level)
 
         # First, check if we have this master directory (and image extraciton test directory) or not
         master_path = Hvf_Test.UNIT_TEST_MASTER_PATH
         test_type_path = os.path.join(Hvf_Test.UNIT_TEST_MASTER_PATH, test_type)
         test_name_path = os.path.join(Hvf_Test.UNIT_TEST_MASTER_PATH, test_type, test_name)
-        test_data_path = os.path.join(test_dir_path, Hvf_Test.UNIT_TEST_TEST_DIR)
-        reference_data_path = os.path.join(test_dir_path, Hvf_Test.UNIT_TEST_REFERENCE_DIR)
+        test_data_path = os.path.join(test_data_path, Hvf_Test.UNIT_TEST_TEST_DIR)
+        reference_data_path = os.path.join(test_data_path, Hvf_Test.UNIT_TEST_REFERENCE_DIR)
 
         # If they don't exist yet, create them
         create_path_if_not_present = master_path

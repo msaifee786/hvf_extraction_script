@@ -61,7 +61,7 @@ class Image_Utils:
     # Given starting coordinates and corresponding slice sizes (all in fractions of
     # the total image size), slices the input image. This uses Numpy slicing
     @staticmethod
-    def slice_image(image, y_ratio, y_size, x_ratio, x_size):
+    def slice_image(image, y_ratio, y_size, x_ratio, x_size, debug_dir=""):
 
         # Calculate height/width for slicing later:
         height = np.size(image, 0)
@@ -75,6 +75,11 @@ class Image_Utils:
         x2 = int(width * (x_ratio + x_size))
 
         image_slice = image[y1:y2, x1:x2]
+
+        if debug_dir:
+            img = Image.fromarray(image_slice)
+            out = Regex_Utils.temp_out(debug_dir=debug_dir)
+            img.save(f"{out}.jpg")
 
         return image_slice
 

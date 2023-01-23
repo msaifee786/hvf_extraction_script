@@ -18,34 +18,17 @@
 #
 ###############################################################################
 
-# Import necessary packages
-import cv2
-import sys
 import os
-
-# Import some helper packages:
-import numpy as np
-from PIL import Image
-from functools import reduce
-
 import pkgutil
 
-# Import some of our own written modules:
+import cv2
+import numpy as np
 
-# For percentile icon detection:
 from hvf_extraction_script.hvf_data.hvf_perc_icon import Hvf_Perc_Icon
-
-# For number value detection:
 from hvf_extraction_script.hvf_data.hvf_value import Hvf_Value
-
-# For error/debug logging:
-from hvf_extraction_script.utilities.logger import Logger
-
-# General purpose image functions:
-from hvf_extraction_script.utilities.image_utils import Image_Utils
-
-# General purpose file functions:
 from hvf_extraction_script.utilities.file_utils import File_Utils
+from hvf_extraction_script.utilities.image_utils import Image_Utils
+from hvf_extraction_script.utilities.logger import Logger
 
 
 class Hvf_Plot_Array:
@@ -187,7 +170,9 @@ class Hvf_Plot_Array:
     def initialize_class_vars(cls):
 
         # Load the icons from a sub-directory -- assumes they are present
-        # triangle_icon_template_path = importlib_resources.path("hvf_extraction_script.hvf_data.other_icons", "icon_triangle.PNG");
+        # triangle_icon_template_path = importlib_resources.path(
+        #     "hvf_extraction_script.hvf_data.other_icons", "icon_triangle.PNG"
+        # )
         # print(triangle_icon_template_path.as_posix());
 
         # Get resource directory - get loader, then cleave off __init__.py
@@ -245,7 +230,7 @@ class Hvf_Plot_Array:
             return Hvf_Plot_Array.get_array_string(self.plot_array, self.icon_type, delimiter)
 
     ###############################################################################
-    # Get list of display string for each row in array (for serialization
+    # Get list of display string for each row in array (for serialization)
     def get_display_string_list(self, delimiter):
 
         # Check if pattern plot/no pattern generated
@@ -337,7 +322,7 @@ class Hvf_Plot_Array:
 
         # Get bounding box from processed image:
         top_left, w, h = Hvf_Plot_Array.get_bounding_box(plot_image_process)
-        bottom_right = (top_left[0] + w, top_left[1] + h)
+        # bottom_right = (top_left[0] + w, top_left[1] + h)
 
         # Need to specifically handle raw value plot - can have a discontinuity in the
         # x axis (with triangle icon), which causes a mis-fit. So need to fill in x-axis
@@ -352,7 +337,7 @@ class Hvf_Plot_Array:
         )
 
         top_left, w, h = Hvf_Plot_Array.get_bounding_box(plot_image_process)
-        bottom_right = (top_left[0] + w, top_left[1] + h)
+        # bottom_right = (top_left[0] + w, top_left[1] + h)
 
         # For debugging: Draw rectangle around the plot - MUST BE COMMENTED OUT, BECAUSE
         # IT WILL INTERFERE WITH LATER PLOT EXTRACTIONS
@@ -360,6 +345,7 @@ class Hvf_Plot_Array:
 
         # Debug function for showing the plot:
         # show_plot_func = (lambda : cv2.imshow("Bound rect for plot " + plot_type, plot_image))
+        # cv2.imwrite(f"Bound_rect_for_plot_{plot_type}.jpg", plot_image)
         # Logger.get_logger().log_function(Logger.DEBUG_FLAG_DEBUG, show_plot_func);
         # cv2.waitKey();
 
@@ -459,7 +445,7 @@ class Hvf_Plot_Array:
 
         # Preprocess this image - we need to bold out axes to eliminate any breaks from noise
         # Perform dilation
-        kernel = np.ones((3, 3), np.uint8)
+        # kernel = np.ones((3, 3), np.uint8)
         tighter_slice = cv2.dilate(tighter_slice, None, iterations=1)
 
         # Before doing contours, draw a black border 1px wide (bc contours don't detect objects
@@ -802,7 +788,7 @@ class Hvf_Plot_Array:
                 )
             )
 
-            kernel = np.ones((3, 3), np.uint8)
+            # kernel = np.ones((3, 3), np.uint8)
 
         # For readability, grab our height/width:
         plot_width = np.size(plot_image, 1)
@@ -840,17 +826,18 @@ class Hvf_Plot_Array:
         # Debug code - draws out slicing for the elements on the plot:
         for c in range(Hvf_Plot_Array.NUM_OF_PLOT_COLS + 1):
             x = int(grid_line_dict["col_list"][c] * plot_width)
-            # cv2.line(plot_image_debug_copy, (x, 0), (x, plot_height), (0), 1);
+            # cv2.line(plot_image_debug_copy, (x, 0), (x, plot_height), (0), 1)
 
         for r in range(Hvf_Plot_Array.NUM_OF_PLOT_ROWS + 1):
             y = int(grid_line_dict["row_list"][r] * plot_height)
-            # cv2.line(plot_image_debug_copy, (0, y), (plot_width, y), (0), 1);
+            # cv2.line(plot_image_debug_copy, (0, y), (plot_width, y), (0), 1)
 
         # Debug function for showing the plot:
-        show_plot_func = lambda: cv2.imshow("plot " + icon_type, plot_image_debug_copy)
+        show_plot_func = lambda: cv2.imshow("plot " + icon_type, plot_image_debug_copy)  # noqa: E731
         Logger.get_logger().log_function(Logger.DEBUG_FLAG_DEBUG, show_plot_func)
 
         # cv2.imshow("plot " + icon_type, plot_image_debug_copy)
+        # cv2.imwrite(f"plot_{icon_type}.jpg", plot_image_debug_copy)
         # cv2.waitKey();
 
         # We iterate through our array, then slice out the appropriate cell from the plot
@@ -900,13 +887,14 @@ class Hvf_Plot_Array:
                                 Logger.DEBUG_FLAG_INFO, "Percentile Icon detected: " + cell_object.get_display_string()
                             )
 
-                        except:
+                        except Exception:
                             Logger.get_logger().log_msg(
                                 Logger.DEBUG_FLAG_WARNING,
                                 "Cell " + str(x) + "," + str(y) + ": Percentile icon detection failure",
                             )
                             cell_object = Hvf_Perc_Icon.get_perc_icon_from_char(Hvf_Perc_Icon.PERC_FAILURE_CHAR)
-                            raise Exception(str(e))
+                            # raise Exception(str(Exception))
+                            # print(str(Exception))
 
                     else:
                         # This is a no-detect element, so just instantiate a blank:
@@ -950,9 +938,9 @@ class Hvf_Plot_Array:
                 # Lastly, store into array:
                 plot_values_array[x, y] = cell_object
 
-        wait_func = lambda: cv2.waitKey(0)
+        wait_func = lambda: cv2.waitKey(0)  # noqa: E731
         Logger.get_logger().log_function(Logger.DEBUG_FLAG_DEBUG, wait_func)
-        destroy_windows_func = lambda: cv2.destroyAllWindows()
+        destroy_windows_func = lambda: cv2.destroyAllWindows()  # noqa: E731
         Logger.get_logger().log_function(Logger.DEBUG_FLAG_DEBUG, destroy_windows_func)
 
         # Return our array:
@@ -988,7 +976,6 @@ class Hvf_Plot_Array:
     def get_array_string_by_line(plot_array, icon_type, delimiter, y_index):
 
         row_array = plot_array[:, y_index]
-        string_array = ""
 
         if icon_type == Hvf_Plot_Array.PLOT_VALUE:
             row_array = map((lambda x: x.get_standard_size_display_string()), row_array)

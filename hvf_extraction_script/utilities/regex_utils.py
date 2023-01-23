@@ -92,6 +92,63 @@ class Regex_Utils:
 
         return ret, string_list
 
+    @staticmethod
+    def strict_regex(label, string_list):
+
+        ret = ""
+
+        # Only remove the best-matched string if we have a good score. If the score is poor,
+        # possible that its a wrong match and deleting it will cause that field to have
+        # a wrong match
+        threshold_to_remove = 85
+
+        filtered_string_list = list(filter(lambda x: len(x) >= len(label), string_list))
+
+        if len(filtered_string_list) == 0:
+
+            ret = Regex_Utils.REGEX_FAILURE
+
+        else:
+
+            # First, search and extract the highest match:
+            string_match = process.extractOne(label, filtered_string_list, scorer=fuzz.partial_ratio)
+            string = string_match[0]
+            score = string_match[1]
+
+            # If its a sufficiently high match, then remove it from the list to help next searches
+            if score >= threshold_to_remove:
+                string_list.remove(string)
+
+            # Fuzzysearch for best match of label within the string:
+            match = find_near_matches(label, string, max_l_dist=1)
+
+            # Need to sort and pull out best match:
+
+            if len(match) == 0:
+                ret = Regex_Utils.REGEX_FAILURE
+
+            else:
+
+                best_match = sorted(match, key=lambda i: i.dist)[0]
+
+                # Convert the best match into actual string slice
+                best_match_string = string[best_match.start : best_match.end]
+
+                # Construct regex based on this slice
+                regex = best_match_string + r"\s*(.*)"
+
+                try:
+                    # Perform the regex search to find the text of interest
+                    output = re.search(regex, string)
+
+                    ret = output.group(1)
+
+                except Exception:
+                    print(label + " Failed searches")
+                    ret = Regex_Utils.REGEX_FAILURE
+
+        return ret, string_list
+
     ###############################################################################
     # Given a label, a regular expression, and a list of strings to search within, fuzzy
     # matches the label into the best-matched string within the list, then applies the
