@@ -23,7 +23,6 @@ import pkgutil
 
 import cv2
 import numpy as np
-
 from hvf_extraction_script.hvf_data.hvf_perc_icon import Hvf_Perc_Icon
 from hvf_extraction_script.hvf_data.hvf_value import Hvf_Value
 from hvf_extraction_script.utilities.file_utils import File_Utils
@@ -32,7 +31,6 @@ from hvf_extraction_script.utilities.logger import Logger
 
 
 class Hvf_Plot_Array:
-
     ###############################################################################
     # CONSTANTS AND STATIC VARIABLES ##############################################
     ###############################################################################
@@ -127,7 +125,6 @@ class Hvf_Plot_Array:
     # Not to be used publicly - use factory methods instead
     # Takes in pertinent data
     def __init__(self, plot_type, icon_type, plot_array, plot_image):
-
         self.plot_type = plot_type
         self.icon_type = icon_type
 
@@ -139,7 +136,6 @@ class Hvf_Plot_Array:
     # Factory method - get a plot from image
     @staticmethod
     def get_plot_from_image(hvf_image_gray, plot_type, icon_type, y_ratio, y_size, x_ratio, x_size):
-
         plot_array = None
         plot_img = None
 
@@ -147,14 +143,15 @@ class Hvf_Plot_Array:
         if plot_type == Hvf_Plot_Array.PLOT_PATTERN_DEV and Hvf_Plot_Array.is_pattern_not_shown(
             hvf_image_gray, y_ratio, y_size, x_ratio, x_size
         ):
-
             plot_array = Hvf_Plot_Array.NO_PATTERN_DETECT
 
         else:
-
-            plot_array, plot_img = Hvf_Plot_Array.get_plot(
-                hvf_image_gray, y_ratio, y_size, x_ratio, x_size, plot_type, icon_type
-            )
+            try:
+                plot_array, plot_img = Hvf_Plot_Array.get_plot(
+                    hvf_image_gray, y_ratio, y_size, x_ratio, x_size, plot_type, icon_type
+                )
+            except Exception as e:
+                print(f"WARN: failed Hvf_Value.get_plot_from_image(): {plot_type}, {icon_type}\n{str(e)}")
 
         return Hvf_Plot_Array(plot_type, icon_type, plot_array, plot_img)
 
@@ -168,7 +165,6 @@ class Hvf_Plot_Array:
     # Variable Initialization method
     @classmethod
     def initialize_class_vars(cls):
-
         # Load the icons from a sub-directory -- assumes they are present
         # triangle_icon_template_path = importlib_resources.path(
         #     "hvf_extraction_script.hvf_data.other_icons", "icon_triangle.PNG"
@@ -222,7 +218,6 @@ class Hvf_Plot_Array:
     ###############################################################################
     # Get display string for array:
     def get_display_string(self, delimiter):
-
         # Check if pattern plot/no pattern generated
         if self.is_pattern_not_generated():
             return self.plot_array
@@ -232,12 +227,10 @@ class Hvf_Plot_Array:
     ###############################################################################
     # Get list of display string for each row in array (for serialization)
     def get_display_string_list(self, delimiter):
-
         # Check if pattern plot/no pattern generated
         if self.is_pattern_not_generated():
             return self.plot_array
         else:
-
             return_list = []
             for r in range(0, np.size(self.plot_array, 1)):
                 return_list.append(
@@ -255,15 +248,12 @@ class Hvf_Plot_Array:
     ###############################################################################
     # Releases saved images (to help save memory)
     def release_saved_image(self):
-
         self.plot_image = None
 
         # Check if pattern plot/no pattern generated
         if not self.is_pattern_not_generated():
-
             for r in range(0, np.size(self.plot_array, 0)):
                 for c in range(0, np.size(self.plot_array, 1)):
-
                     self.plot_array[r][c].release_saved_image()
 
         return
@@ -282,7 +272,6 @@ class Hvf_Plot_Array:
     # Searches for specific text stating that pattern is not performed. If the text
     # matches with high enough score, returns true
     def is_pattern_not_shown(hvf_image_gray, y_ratio, y_size, x_ratio, x_size):
-
         # Calculate height/width for calculation later:
         height = np.size(hvf_image_gray, 0)
         width = np.size(hvf_image_gray, 1)
@@ -314,7 +303,6 @@ class Hvf_Plot_Array:
     # each cell (used in a downstream function)
     @staticmethod
     def get_plot(hvf_image_gray, y_ratio, y_size, x_ratio, x_size, plot_type, icon_type):
-
         plot_image = Image_Utils.slice_image(hvf_image_gray, y_ratio, y_size, x_ratio, x_size)
 
         hvf_image_gray_process = Image_Utils.preprocess_image(hvf_image_gray.copy())
@@ -361,7 +349,6 @@ class Hvf_Plot_Array:
     ###############################################################################
     # Generates a template for matching to the pattern deviation plot
     def generate_plot_template(w, h):
-
         # Create a white grayscale image
         template = np.ones((h, w, 1), np.uint8) * 255
 
@@ -381,7 +368,6 @@ class Hvf_Plot_Array:
     ###############################################################################
     # Generates a mask for matching the template to the pattern deviation plot
     def generate_plot_mask(w, h):
-
         # Create a baseline mask image
         # 0s are transparent
         mask = np.zeros((h, w, 1), np.uint8)
@@ -395,7 +381,6 @@ class Hvf_Plot_Array:
     ###############################################################################
     # Generates a mask for matching the template to the pattern deviation plot
     def generate_corner_mask(w, h):
-
         # Create a baseline mask image
         # 0s are transparent
         mask = np.ones((h, w, 1), np.uint8) * 255
@@ -433,7 +418,6 @@ class Hvf_Plot_Array:
         return w * h
 
     def get_bounding_box(sliced_image):
-
         # To get the best bounding box, first we preprocess frame, then search for the largest
         # width/length based on contours, and recenter over the cross with those best
         # dimensions
@@ -550,7 +534,6 @@ class Hvf_Plot_Array:
     # Given a plot, deletes the plot axes
     @staticmethod
     def delete_plot_axes(plot_image):
-
         w = np.size(plot_image, 1)
         h = np.size(plot_image, 0)
 
@@ -598,7 +581,6 @@ class Hvf_Plot_Array:
         return (cx, cy)
 
     def get_plot_grid_lines(plot_image, plot_type, icon_type):
-
         Logger.get_logger().log_msg(Logger.DEBUG_FLAG_INFO, "Finding grid lines")
 
         plot_w = np.size(plot_image, 1)
@@ -664,7 +646,6 @@ class Hvf_Plot_Array:
         slice_h = np.size(vertical_slice, 0)
 
         for c in range(Hvf_Plot_Array.NUM_OF_PLOT_COLS + 1):
-
             # Get our prelim column value:
             col_val = 0.5 - (0.097 * (5 - c))
 
@@ -698,7 +679,6 @@ class Hvf_Plot_Array:
         slice_w = np.size(horizontal_slice, 1)
         slice_h = np.size(horizontal_slice, 0)
         for r in range(Hvf_Plot_Array.NUM_OF_PLOT_ROWS + 1):
-
             # Get our prelim row value:
             row_val = 0.5 - (0.095 * (5 - r))
 
@@ -760,7 +740,6 @@ class Hvf_Plot_Array:
     #     x x x | x x x
     #       x x | x x
     def extract_values_from_plot(plot_image, plot_type, icon_type):
-
         # First, image process for best readability:
         # plot_image = cv2.GaussianBlur(plot_image, (5,5), 0)
 
@@ -843,7 +822,6 @@ class Hvf_Plot_Array:
         # We iterate through our array, then slice out the appropriate cell from the plot
         for x in range(0, NUM_CELLS_COL):
             for y in range(0, NUM_CELLS_ROW):
-
                 # Debug info for indicating what cell we're computing:
                 Logger.get_logger().log_msg(Logger.DEBUG_FLAG_INFO, "Cell " + str(x) + "," + str(y))
 
@@ -872,7 +850,6 @@ class Hvf_Plot_Array:
                 # Then, need to analyze to figure out what element is in this position
                 # What we look for depends on type of plot - perc vs value
                 if icon_type == Hvf_Plot_Array.PLOT_PERC:
-
                     if Hvf_Plot_Array.PLOT_ELEMENT_BOOLEAN_MASK[y][x]:
                         # This element needs to be detected
 
@@ -904,7 +881,6 @@ class Hvf_Plot_Array:
                         )
 
                 elif icon_type == Hvf_Plot_Array.PLOT_VALUE:
-
                     if Hvf_Plot_Array.PLOT_ELEMENT_BOOLEAN_MASK[y][x]:
                         # This element needs to be detected
 
@@ -955,12 +931,10 @@ class Hvf_Plot_Array:
     # Uses the delimiter passed in as an argument
     # Assumes plot_array is array of cell objects (hvf_value or hvf_perc_icon)
     def get_array_string(plot_array, icon_type, delimiter):
-
         ret_string = ""
 
         # Have to iterate in an odd way because of the way the array is organized
         for i in range(0, np.size(plot_array, 1)):
-
             ret_string = (
                 ret_string + Hvf_Plot_Array.get_array_string_by_line(plot_array, icon_type, delimiter, i) + "\n\n"
             )
@@ -974,7 +948,6 @@ class Hvf_Plot_Array:
     # First index is x-axis (column), second index is y-axis (row)
     # Because we want human-readable string, we index to pull out an entire row (ie, fixed y)
     def get_array_string_by_line(plot_array, icon_type, delimiter, y_index):
-
         row_array = plot_array[:, y_index]
 
         if icon_type == Hvf_Plot_Array.PLOT_VALUE:

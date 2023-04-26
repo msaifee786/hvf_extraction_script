@@ -36,6 +36,7 @@
 
 import json
 import os
+import shutil
 
 import cv2
 import numpy as np
@@ -158,6 +159,7 @@ class Hvf_Object:
     HVF_FULL_THRESHOLD = "Full Threshold"
     HVF_SITA_STANDARD = "SITA Standard"
     HVF_SITA_FAST = "SITA Fast"
+    HVF_TWO_ZONE = "Two Zone"
 
     # Gender
     HVF_MALE = "Male"
@@ -194,6 +196,7 @@ class Hvf_Object:
     HVF_LAYOUT_V2 = "v2"
     HVF_LAYOUT_V2_GPA = "v2_gpa"
     HVF_LAYOUT_V3 = "v3"
+    HVF_LAYOUT_UNK = "UNKNOWN"
 
     ###############################################################################
     # CONSTRUCTOR AND FACTORY METHODS #############################################
@@ -233,6 +236,7 @@ class Hvf_Object:
     @classmethod
     def get_hvf_object_from_image(cls, hvf_image, debug_dir="", rekognition=False):
         if debug_dir:
+            shutil.rmtree(debug_dir)
             os.makedirs(debug_dir, exist_ok=True)
 
         cls.debug_dir = debug_dir
@@ -264,29 +268,53 @@ class Hvf_Object:
         if debug_dir:
             print(f">>> layout_version {layout_version}, width {width}")
 
+        tag_failed = False
         # Get absolute raw value plot:
-        raw_value_array = cls.get_abs_raw_val_plot(hvf_image_gray, layout_version)
+        try:
+            raw_value_array = cls.get_abs_raw_val_plot(hvf_image_gray, layout_version)
+        except Exception:
+            raw_value_array = None
+            tag_failed = True
 
         # Get deviation value plots (both absolute and pattern):
-        abs_dev_value_array = cls.get_abs_deviation_val_plot(hvf_image_gray)
-        pat_dev_value_array = cls.get_pattern_deviation_val_plot(hvf_image_gray)
+        try:
+            abs_dev_value_array = cls.get_abs_deviation_val_plot(hvf_image_gray)
+        except Exception:
+            abs_dev_value_array = None
+            tag_failed = True
+        try:
+            pat_dev_value_array = cls.get_pattern_deviation_val_plot(hvf_image_gray)
+        except Exception:
+            pat_dev_value_array = None
+            tag_failed = True
 
         # Now, get the deviation percentile plots (both absolute and pattern):
-        abs_dev_percentile_array = cls.get_abs_deviation_perc_plot(hvf_image_gray)
-        pat_dev_percentile_array = cls.get_pattern_deviation_perc_plot(hvf_image_gray)
+        try:
+            abs_dev_percentile_array = cls.get_abs_deviation_perc_plot(hvf_image_gray)
+        except Exception:
+            abs_dev_percentile_array = None
+            tag_failed = True
+        try:
+            pat_dev_percentile_array = cls.get_pattern_deviation_perc_plot(hvf_image_gray)
+        except Exception:
+            pat_dev_percentile_array = None
+            tag_failed = True
 
         # Get header metadata:
         metadata = cls.get_header_metadata_from_hvf_image(cls, hvf_image_gray, layout_version)
 
         # Then validate the field size/laterality based on layout of field:
-        field_size_laterality_dict = Hvf_Object.get_field_size_laterality_from_plot(abs_dev_value_array)
-        metadata.update(field_size_laterality_dict)
+        if not tag_failed and abs_dev_value_array.plot_array is not None:
+            field_size_laterality_dict = Hvf_Object.get_field_size_laterality_from_plot(abs_dev_value_array)
+            metadata.update(field_size_laterality_dict)
+            # Then, get the metric metadata (need to know field size):
+            metric_metadata = cls.get_metric_metadata_from_hvf_image(
+                cls, hvf_image_gray, layout_version, metadata[Hvf_Object.KEYLABEL_FIELD_SIZE]
+            )
+            metadata.update(metric_metadata)
 
-        # Then, get the metric metadata (need to know field size):
-        metric_metadata = cls.get_metric_metadata_from_hvf_image(
-            cls, hvf_image_gray, layout_version, metadata[Hvf_Object.KEYLABEL_FIELD_SIZE]
-        )
-        metadata.update(metric_metadata)
+        else:
+            layout_version = Hvf_Object.HVF_LAYOUT_UNK
 
         layout_dict = {Hvf_Object.KEYLABEL_LAYOUT: layout_version}
 
@@ -509,16 +537,14 @@ class Hvf_Object:
         # ===== STRATEGY =====
         field = str(dicom_ds.PerformedProtocolCodeSequence[1].CodeMeaning)
 
-        list_of_strategies = [Hvf_Object.HVF_FULL_THRESHOLD, Hvf_Object.HVF_SITA_STANDARD, Hvf_Object.HVF_SITA_FAST]
-        best_match = Regex_Utils.REGEX_FAILURE
-        best_score = 0
+        list_of_strategies = [
+            Hvf_Object.HVF_FULL_THRESHOLD,
+            Hvf_Object.HVF_SITA_STANDARD,
+            Hvf_Object.HVF_SITA_FAST,
+            Hvf_Object.HVF_TWO_ZONE,
+        ]
 
-        for strategy in list_of_strategies:
-            score = fuzz.partial_ratio(strategy, field)
-
-            if score > best_score:
-                best_match = strategy
-                best_score = score
+        field = Hvf_Object.get_best_match(list_of_strategies, field)
 
         hvf_metadata[Hvf_Object.KEYLABEL_STRATEGY] = best_match
 
@@ -780,6 +806,8 @@ class Hvf_Object:
     @classmethod
     def get_best_match(cls, alist: list, field: str) -> str:
         best_match = Regex_Utils.REGEX_FAILURE
+        if field == best_match:
+            return field
         best_score = 0
 
         for item in alist:
@@ -826,22 +854,23 @@ class Hvf_Object:
         # Add the abs and pattern value deviation plots:
         # We make a list of strings corresponding to the plot row (ease of readability)
 
-        # Store the row string lists in the serialization dict:
-        serialize_dict[Hvf_Object.KEYLABEL_RAW_VAL_PLOT] = self.raw_value_array.get_display_string_list(
-            Hvf_Object.SERIALIZATION_DELIMITER_CHAR
-        )
-        serialize_dict[Hvf_Object.KEYLABEL_ABS_VAL_PLOT] = self.abs_dev_value_array.get_display_string_list(
-            Hvf_Object.SERIALIZATION_DELIMITER_CHAR
-        )
-        serialize_dict[Hvf_Object.KEYLABEL_PAT_VAL_PLOT] = self.pat_dev_value_array.get_display_string_list(
-            Hvf_Object.SERIALIZATION_DELIMITER_CHAR
-        )
-        serialize_dict[Hvf_Object.KEYLABEL_ABS_PERC_PLOT] = self.abs_dev_percentile_array.get_display_string_list(
-            Hvf_Object.SERIALIZATION_DELIMITER_CHAR
-        )
-        serialize_dict[Hvf_Object.KEYLABEL_PAT_PERC_PLOT] = self.pat_dev_percentile_array.get_display_string_list(
-            Hvf_Object.SERIALIZATION_DELIMITER_CHAR
-        )
+        if not Hvf_Object.HVF_LAYOUT_UNK:
+            # Store the row string lists in the serialization dict:
+            serialize_dict[Hvf_Object.KEYLABEL_RAW_VAL_PLOT] = self.raw_value_array.get_display_string_list(
+                Hvf_Object.SERIALIZATION_DELIMITER_CHAR
+            )
+            serialize_dict[Hvf_Object.KEYLABEL_ABS_VAL_PLOT] = self.abs_dev_value_array.get_display_string_list(
+                Hvf_Object.SERIALIZATION_DELIMITER_CHAR  # Failed
+            )
+            serialize_dict[Hvf_Object.KEYLABEL_PAT_VAL_PLOT] = self.pat_dev_value_array.get_display_string_list(
+                Hvf_Object.SERIALIZATION_DELIMITER_CHAR
+            )
+            serialize_dict[Hvf_Object.KEYLABEL_ABS_PERC_PLOT] = self.abs_dev_percentile_array.get_display_string_list(
+                Hvf_Object.SERIALIZATION_DELIMITER_CHAR
+            )
+            serialize_dict[Hvf_Object.KEYLABEL_PAT_PERC_PLOT] = self.pat_dev_percentile_array.get_display_string_list(
+                Hvf_Object.SERIALIZATION_DELIMITER_CHAR
+            )
 
         # Lastly, we convert to JSON string and return that
 
@@ -1209,8 +1238,9 @@ class Hvf_Object:
 
         # ===== VISUAL_ACUITY DETECTION =====
         field, tokenized_header_middle_list = Regex_Utils.fuzzy_regex("Visual Acuity:", tokenized_header_middle_list)
-        field = field[: field.find("Time")]  # affects V2
-        field = Regex_Utils.remove_spaces(field)
+        if field != Regex_Utils.REGEX_FAILURE:
+            field = field[: field.find("Time")]  # affects V2
+            field = Regex_Utils.remove_spaces(field)
         hvf_metadata[Hvf_Object.KEYLABEL_VISUAL_ACUITY] = field
 
         # ===== BACKGROUND DETECTION =====
@@ -1352,13 +1382,13 @@ class Hvf_Object:
 
         field, tokenized_header1_list = Regex_Utils.fuzzy_regex("False POS Errors: ", tokenized_header1_list)
         field = Regex_Utils.remove_spaces(field)
-        field = Regex_Utils.remove_non_numeric(field, [r"%"])
+        field = Regex_Utils.remove_non_numeric(field, [r"%", "/"])
         field = field.replace("O", "0")
         hvf_metadata[Hvf_Object.KEYLABEL_FALSE_POS] = field
 
         field, tokenized_header1_list = Regex_Utils.fuzzy_regex("False NEG Errors: ", tokenized_header1_list)
         field = Regex_Utils.remove_spaces(field)
-        field = Regex_Utils.remove_non_numeric(field, [r"%"])
+        field = Regex_Utils.remove_non_numeric(field, [r"%", "/"])
         field = field.replace("O", "0")
         hvf_metadata[Hvf_Object.KEYLABEL_FALSE_NEG] = field
 
@@ -1396,7 +1426,12 @@ class Hvf_Object:
         # ===== STRATEGY DETECTION =====
         field, tokenized_header_middle_list = Regex_Utils.fuzzy_regex("Strategy: ", tokenized_header_middle_list)
 
-        list_of_strategies = [Hvf_Object.HVF_FULL_THRESHOLD, Hvf_Object.HVF_SITA_STANDARD, Hvf_Object.HVF_SITA_FAST]
+        list_of_strategies = [
+            Hvf_Object.HVF_FULL_THRESHOLD,
+            Hvf_Object.HVF_SITA_STANDARD,
+            Hvf_Object.HVF_SITA_FAST,
+            Hvf_Object.HVF_TWO_ZONE,
+        ]
 
         field = Hvf_Object.get_best_match(list_of_strategies, field)
 
