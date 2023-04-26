@@ -65,7 +65,6 @@ from hvf_extraction_script.utilities.regex_utils import Regex_Utils
 
 
 class Hvf_Object:
-
     ###############################################################################
     # CONSTANTS AND STATIC VARIABLES ##############################################
     ###############################################################################
@@ -215,7 +214,6 @@ class Hvf_Object:
         pat_dev_perc_array,
         image,
     ):
-
         self.metadata = metadata
 
         self.raw_value_array = raw_value_array
@@ -234,10 +232,8 @@ class Hvf_Object:
     # Takes in an OpenCV image object
     @classmethod
     def get_hvf_object_from_image(cls, hvf_image, debug_dir="", rekognition=False):
-
         if debug_dir:
-            if not os.path.exists(debug_dir):
-                os.mkdir(debug_dir)
+            os.makedirs(debug_dir, exist_ok=True)
 
         cls.debug_dir = debug_dir
         cls.rekognition = rekognition
@@ -314,7 +310,6 @@ class Hvf_Object:
     # This is the method to call to generate a new object from a 'saved' object
     @classmethod
     def get_hvf_object_from_text(cls, hvf_text):
-
         # TODO:
         # Perform entire function under a try-catch block -- if any issues, throw
         # a warning log
@@ -355,7 +350,6 @@ class Hvf_Object:
         if pat_val_plot_list_by_row == Hvf_Object.NO_PATTERN_DETECT:
             pat_val_plot = Hvf_Object.NO_PATTERN_DETECT
         else:
-
             # If we do indeed have a pattern plot, extract it:
             pat_val_plot = Hvf_Object.get_value_plot_from_row_strings(pat_val_plot_list_by_row)
 
@@ -384,7 +378,6 @@ class Hvf_Object:
         if pat_perc_plot_list_by_row == Hvf_Object.NO_PATTERN_DETECT:
             pat_perc_plot = Hvf_Object.NO_PATTERN_DETECT
         else:
-
             # If we do indeed have a pattern plot, extract it:
             pat_perc_plot = Hvf_Object.get_perc_plot_from_row_strings(pat_perc_plot_list_by_row)
 
@@ -408,7 +401,6 @@ class Hvf_Object:
     # Takes in a pydicom dataset object
     @classmethod
     def get_hvf_object_from_dicom(cls, dicom_ds):
-
         # First, extract metadata:
         hvf_metadata = {}
 
@@ -776,7 +768,6 @@ class Hvf_Object:
     # ease of calculation
     @classmethod
     def initialize_class_vars(cls):
-
         Hvf_Plot_Array.initialize_class_vars()
         Hvf_Perc_Icon.initialize_class_vars()
         Hvf_Value.initialize_class_vars()
@@ -807,7 +798,6 @@ class Hvf_Object:
     ###############################################################################
     # Releases saved images (to help save memory)
     def release_saved_image(self):
-
         self.image = None
 
         self.raw_value_array.release_saved_image()
@@ -825,7 +815,6 @@ class Hvf_Object:
     # Allow HVF processing to be saved for quick reading
     # Delimit everything by same character
     def serialize_to_json(self):
-
         # We essentially create a large dictionary of all the pertinent info, then
         # convert to JSON
         # For ease/reliability of behaviour, we convert the arrays to strings and
@@ -923,7 +912,6 @@ class Hvf_Object:
     ###############################################################################
     # Returns boolean of equality between object and argument
     def equals(self, arg_obj):
-
         for key in Hvf_Object.METADATA_KEY_LIST:
             if not (self.metadata.get(key) == arg_obj.metadata.get(key)):
                 return False
@@ -967,7 +955,6 @@ class Hvf_Object:
     # Searching done by regex and fuzzy matching
     # Likely will need to be improved in future
     def find_image_layout_version(self, hvf_image, width):
-
         # Perform some pre-processing:
 
         # Recall arguments: (image, y_ratio, y_size, x_ratio, x_size)
@@ -1016,7 +1003,6 @@ class Hvf_Object:
     # Given a value plot by rows, returns the constructed value plot:
     @staticmethod
     def get_value_plot_from_row_strings(value_plot_by_row):
-
         ret_plot = np.zeros((10, 10), dtype=Hvf_Value)
 
         for ii in range(0, len(value_plot_by_row)):
@@ -1038,7 +1024,6 @@ class Hvf_Object:
     # Given a perc plot by rows, returns the constructed perc plot:
     @staticmethod
     def get_perc_plot_from_row_strings(perc_plot_by_row):
-
         # Absolute percentile plot:
         ret_plot = np.zeros((10, 10), dtype=Hvf_Perc_Icon)
 
@@ -1059,7 +1044,6 @@ class Hvf_Object:
     ###############################################################################
     # Reads header metadata from HVF image:
     def get_header_metadata_from_hvf_image(self, hvf_image_gray, layout_version):
-
         # hvf_image_gray = Image_Utils.preprocess_image(hvf_image_gray);
 
         # First, convert grayscale -> black and white, to optimize text detection
@@ -1108,7 +1092,6 @@ class Hvf_Object:
             or (layout_version == Hvf_Object.HVF_LAYOUT_V2)
             or (layout_version == Hvf_Object.HVF_LAYOUT_V2_GPA)
         ):
-
             # Header 2 slice:
             # Height: 0.0 -> 0.17
             # Width: 0.31 -> 0.547
@@ -1136,7 +1119,6 @@ class Hvf_Object:
             header_text_middle = header_text2 + header_text3
 
         if layout_version == Hvf_Object.HVF_LAYOUT_V3:
-
             # Middle Header slice:
             # Height: 0.0 -> 0.27
             # Width: 0.403 -> 0.75
@@ -1346,7 +1328,6 @@ class Hvf_Object:
             if max([fuzz.partial_ratio(x, field) for x in offs]) > 66:
                 field = "OFF"
             else:
-
                 # Construct regex to fuzzy extract the value
                 regexp = r"(.*)\s*dB{e<=1}"
 
@@ -1473,7 +1454,6 @@ class Hvf_Object:
             output = regex.search(regexp, field)
 
             try:
-
                 sphere = output.group(1)
                 sphere = Regex_Utils.remove_spaces(sphere)
                 sphere = Regex_Utils.clean_punctuation_to_period(sphere)
@@ -1514,7 +1494,6 @@ class Hvf_Object:
     ###############################################################################
     # Reads MD/PSD/VFI metadata from HVF image:
     def get_metric_metadata_from_hvf_image(self, hvf_image_gray, layout_version, field_size):
-
         # Image processing for optimization:
         # First, convert grayscale -> black and white, to optimize text detection
         hvf_image_gray = cv2.bitwise_not(
@@ -1569,7 +1548,6 @@ class Hvf_Object:
             )
 
         if layout_version == Hvf_Object.HVF_LAYOUT_V3:
-
             # Can either be MD<FIELD SIZE> (eg, MD24-2) or MD; regex for optional
             label = "MD{} dB".format(field_size)
             regex_string = "MD(?:" + field_size + r")?:\s*(.*)dB{e<=2}"
@@ -1595,7 +1573,6 @@ class Hvf_Object:
             )
 
         if layout_version == Hvf_Object.HVF_LAYOUT_V3:
-
             # Can either be PSD<FIELD SIZE> (eg, PSD24-2) or PSD; regex for optional
             label = "PSD{} dB".format(field_size)
             regex_string = "PSD(?:" + field_size + r")?:\s*(.*)dB{e<=2}"
@@ -1643,7 +1620,6 @@ class Hvf_Object:
     ###############################################################################
     # Validates field size/laterality from argument plot:
     def get_field_size_laterality_from_plot(val_plot):
-
         dict = {}
 
         field_testing = {
@@ -1658,7 +1634,6 @@ class Hvf_Object:
             boolean_mask_plot = field_testing[field]
 
             for laterality in laterality_testing:
-
                 if Hvf_Object.compare_plot_template(val_plot, boolean_mask_plot, laterality):
                     dict[Hvf_Object.KEYLABEL_FIELD_SIZE] = field
 
@@ -1672,7 +1647,6 @@ class Hvf_Object:
     ###############################################################################
     # Helper function for validating field size/laterality
     def compare_plot_template(val_plot, boolean_mask_plot, laterality):
-
         if laterality == Hvf_Object.HVF_OD:
             laterality_conversion = 0
         else:
@@ -1680,7 +1654,6 @@ class Hvf_Object:
 
         for c in range(0, 10):
             for r in range(0, 10):
-
                 val = val_plot.get_plot_array()[c, r]
 
                 boolean = boolean_mask_plot[r][abs(c - laterality_conversion)]
