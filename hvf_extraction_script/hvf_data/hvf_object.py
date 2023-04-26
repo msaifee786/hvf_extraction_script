@@ -854,7 +854,7 @@ class Hvf_Object:
         # Add the abs and pattern value deviation plots:
         # We make a list of strings corresponding to the plot row (ease of readability)
 
-        if not Hvf_Object.HVF_LAYOUT_UNK:
+        if self.metadata.get("layout_version") != Hvf_Object.HVF_LAYOUT_UNK:
             # Store the row string lists in the serialization dict:
             serialize_dict[Hvf_Object.KEYLABEL_RAW_VAL_PLOT] = self.raw_value_array.get_display_string_list(
                 Hvf_Object.SERIALIZATION_DELIMITER_CHAR
