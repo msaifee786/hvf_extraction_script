@@ -7,9 +7,10 @@ from collections import defaultdict
 from operator import attrgetter
 
 import boto3
+from PIL import Image
+
 from hvf_extraction_script.utilities.image_utils import Image_Utils
 from hvf_extraction_script.utilities.regex_utils import Regex_Utils
-from PIL import Image
 
 
 class RekognitionText:

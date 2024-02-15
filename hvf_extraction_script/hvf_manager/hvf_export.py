@@ -8,29 +8,19 @@
 ###############################################################################
 
 # Import necessary packages
-import cv2
-import sys
-import argparse
-import difflib
-from shutil import copyfile
-import os
 import numpy as np
-
-# General purpose file functions:
-from hvf_extraction_script.utilities.file_utils import File_Utils
-from hvf_extraction_script.utilities.regex_utils import Regex_Utils
-
-# Import logger class to handle any messages:
-from hvf_extraction_script.utilities.logger import Logger
 
 # Import the HVF_Object class
 from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object
+from hvf_extraction_script.hvf_data.hvf_perc_icon import Hvf_Perc_Icon
 from hvf_extraction_script.hvf_data.hvf_plot_array import Hvf_Plot_Array
 from hvf_extraction_script.hvf_data.hvf_value import Hvf_Value
-from hvf_extraction_script.hvf_data.hvf_perc_icon import Hvf_Perc_Icon
+
+# General purpose file functions:
+# Import logger class to handle any messages:
+from hvf_extraction_script.utilities.logger import Logger
 
 # Include editing modules:
-from hvf_extraction_script.hvf_manager.hvf_editor import Hvf_Editor
 
 
 class Hvf_Export:
@@ -181,7 +171,7 @@ class Hvf_Export:
             # Grab hvf_obj:
             hvf_obj = dict_of_hvf[file_name]
 
-            Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Converting File {}".format(file_name))
+            Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, f"Converting File {file_name}")
 
             # Convert to string:
             hvf_obj_line = (
@@ -335,7 +325,7 @@ class Hvf_Export:
         for line in list_of_lines:
 
             file_name = line.pop("file_name")
-            Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, "Reading data for {}".format(file_name))
+            Logger.get_logger().log_msg(Logger.DEBUG_FLAG_SYSTEM, f"Reading data for {file_name}")
 
             hvf_obj = Hvf_Export.get_hvf_object_from_line(line)
 

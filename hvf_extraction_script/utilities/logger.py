@@ -122,7 +122,7 @@ class Logger:
             time_elapsed = math.trunc(1000 * (end_time - start_time))
 
             # Log the time:
-            self.log_msg(Logger.DEBUG_FLAG_TIME, event_string + " done in {0} ms".format(time_elapsed))
+            self.log_msg(Logger.DEBUG_FLAG_TIME, event_string + f" done in {time_elapsed} ms")
 
             return time_elapsed
 

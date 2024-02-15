@@ -13,11 +13,11 @@ import cv2
 
 # Import some helper packages:
 import numpy as np
+from PIL import Image
 
 # For error/debug logging:
 from hvf_extraction_script.utilities.logger import Logger
 from hvf_extraction_script.utilities.regex_utils import Regex_Utils
-from PIL import Image
 
 
 class Image_Utils:

@@ -12,21 +12,19 @@
 ###############################################################################
 
 # Import necessary packages
+
 import numpy as np
-
-import pprint
-
-# Import logger class to handle any messages:
-from hvf_extraction_script.utilities.logger import Logger
 
 # Import the HVF_Object class and helper classes
 from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object
 from hvf_extraction_script.hvf_data.hvf_perc_icon import Hvf_Perc_Icon
-from hvf_extraction_script.hvf_data.hvf_value import Hvf_Value
 from hvf_extraction_script.hvf_data.hvf_plot_array import Hvf_Plot_Array
+from hvf_extraction_script.hvf_data.hvf_value import Hvf_Value
 
 # Import HVF data managers:
 from hvf_extraction_script.hvf_manager.hvf_editor import Hvf_Editor
+
+# Import logger class to handle any messages:
 
 
 class Hvf_Metric_Calculator:
@@ -187,9 +185,7 @@ class Hvf_Metric_Calculator:
                 element = perc_array[x, y].get_enum()
 
                 # Move on if element is not a true icon, or if its normal
-                if (element == Hvf_Perc_Icon.PERC_NORMAL) or not (
-                    element in Hvf_Metric_Calculator.CIGTS_ICON_SCORE.keys()
-                ):
+                if (element == Hvf_Perc_Icon.PERC_NORMAL) or element not in Hvf_Metric_Calculator.CIGTS_ICON_SCORE.keys():
                     continue
 
                 # Initialize counts of surrounding icons:
@@ -214,7 +210,7 @@ class Hvf_Metric_Calculator:
                         adj_element_enum = perc_array[ii, jj].get_enum()
 
                         # Move on if adjacent icon is not a true icon:
-                        if not (adj_element_enum in Hvf_Metric_Calculator.CIGTS_ICON_SCORE.keys()):
+                        if adj_element_enum not in Hvf_Metric_Calculator.CIGTS_ICON_SCORE.keys():
                             continue
 
                         # Skip if not in same vertical hemisphere:

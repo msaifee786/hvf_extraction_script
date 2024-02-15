@@ -97,7 +97,7 @@ class Hvf_Test:
 
                     fail_dict = {
                         "test_name": test_name,
-                        "location": "{}, {}".format(c, r),
+                        "location": f"{c}, {r}",
                         "expected": exp_val.get_display_string(),
                         "actual": val.get_display_string(),
                     }
@@ -195,7 +195,7 @@ class Hvf_Test:
             test_data = test_metadata.get(key, "<No Value>")
             if not (comparison_func(ref_data, test_data)):
                 metadata_fail_str_list.append(
-                    "Key: {} - expected: {}, actual: {}".format(str(key), str(ref_data), str(test_data))
+                    f"Key: {key!s} - expected: {ref_data!s}, actual: {test_data!s}"
                 )
                 fail_dict = {"test_name": test_name, "field_name": key, "expected": ref_data, "actual": test_data}
                 metadata_errors.append(fail_dict)
@@ -393,7 +393,7 @@ class Hvf_Test:
         testing_msgs.append("================================================================================")
         testing_msgs.append("Starting test: " + test_name)
         if time_elapsed > 0:
-            testing_msgs.append("Time for extraction: {} ms".format(str(time_elapsed)))
+            testing_msgs.append(f"Time for extraction: {time_elapsed!s} ms")
 
         # Declare our testing_data dictionary to keep track of data:
         # Vals = count of total values
@@ -817,21 +817,21 @@ class Hvf_Test:
         if not os.path.isdir(test_dir_path):
             # This path does not exist!
             Logger.get_logger().log_msg(
-                Logger.DEBUG_FLAG_ERROR, "Unit test directory '{}' does not exist".format(test_dir_path)
+                Logger.DEBUG_FLAG_ERROR, f"Unit test directory '{test_dir_path}' does not exist"
             )
             return ""
 
         if not os.path.isdir(test_data_path):
             # This path does not exist!
             Logger.get_logger().log_msg(
-                Logger.DEBUG_FLAG_ERROR, "Unit test directory '{}' does not exist".format(test_data_path)
+                Logger.DEBUG_FLAG_ERROR, f"Unit test directory '{test_data_path}' does not exist"
             )
             return ""
 
         if not os.path.isdir(reference_data_path):
             # This path does not exist!
             Logger.get_logger().log_msg(
-                Logger.DEBUG_FLAG_ERROR, "Unit test directory '{}' does not exist".format(reference_data_path)
+                Logger.DEBUG_FLAG_ERROR, f"Unit test directory '{reference_data_path}' does not exist"
             )
             return ""
 
@@ -839,8 +839,8 @@ class Hvf_Test:
             debug_level, "================================================================================"
         )
         Logger.get_logger().log_msg(debug_level, "Starting HVF Unit Testing")
-        Logger.get_logger().log_msg(debug_level, "Test Type: {}".format(test_type))
-        Logger.get_logger().log_msg(debug_level, "Unit Test Name: {}".format(sub_dir))
+        Logger.get_logger().log_msg(debug_level, f"Test Type: {test_type}")
+        Logger.get_logger().log_msg(debug_level, f"Unit Test Name: {sub_dir}")
 
         # Declare variable to keep track of times, errors, etc
         # Will be a list of raw data --> we will calculate metrics at the end
@@ -912,7 +912,7 @@ class Hvf_Test:
                 time_elapsed = 0
 
             else:
-                Logger.get_logger().log_msg(Logger.DEBUG_FLAG_ERROR, "Unrecognized test type '{}'".format(test_type))
+                Logger.get_logger().log_msg(Logger.DEBUG_FLAG_ERROR, f"Unrecognized test type '{test_type}'")
                 return ""
 
             testing_data_dict, testing_msgs = Hvf_Test.test_hvf_obj(
@@ -1023,7 +1023,7 @@ class Hvf_Test:
         if not (test_filename_root == ref_filename_root):
             ref_filename = test_filename_root + "." + ref_ext
             Logger.get_logger().log_msg(
-                Logger.DEBUG_FLAG_SYSTEM, "Renaming reference file to {} to match with test file".format(ref_filename)
+                Logger.DEBUG_FLAG_SYSTEM, f"Renaming reference file to {ref_filename} to match with test file"
             )
 
         # Save the files:
@@ -1031,7 +1031,7 @@ class Hvf_Test:
         copyfile(test_data_path, os.path.join(test_data_path, test_filename))
 
         Logger.get_logger().log_msg(
-            Logger.DEBUG_FLAG_SYSTEM, "Added unit test - TYPE: {}, NAME: {}".format(test_type, test_filename_root)
+            Logger.DEBUG_FLAG_SYSTEM, f"Added unit test - TYPE: {test_type}, NAME: {test_filename_root}"
         )
 
         return ""

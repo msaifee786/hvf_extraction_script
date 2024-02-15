@@ -236,7 +236,7 @@ class Regex_Utils:
             for char in safe_char_list:
                 regex_str = regex_str + "^\\" + char
 
-            string = re.sub("[{}]".format(regex_str), "", string)
+            string = re.sub(f"[{regex_str}]", "", string)
 
             return string
 

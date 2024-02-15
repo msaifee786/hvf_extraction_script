@@ -37,6 +37,7 @@
 import json
 import os
 import shutil
+from typing import ClassVar
 
 import cv2
 import numpy as np
@@ -114,7 +115,7 @@ class Hvf_Object:
     KEYLABEL_VFI = "vfi"
     KEYLABEL_LAYOUT = "layout_version"
 
-    METADATA_KEY_LIST = [
+    METADATA_KEY_LIST: ClassVar[list] = [
         KEYLABEL_LAYOUT,
         KEYLABEL_NAME,
         KEYLABEL_DOB,
@@ -142,9 +143,9 @@ class Hvf_Object:
         KEYLABEL_VFI,
     ]
 
-    ABS_PLOT_KEY_LIST = [KEYLABEL_ABS_VAL_PLOT, KEYLABEL_ABS_PERC_PLOT]
+    ABS_PLOT_KEY_LIST: ClassVar[list] = [KEYLABEL_ABS_VAL_PLOT, KEYLABEL_ABS_PERC_PLOT]
 
-    PAT_PLOT_KEY_LIST = [KEYLABEL_PAT_VAL_PLOT, KEYLABEL_PAT_PERC_PLOT]
+    PAT_PLOT_KEY_LIST: ClassVar[list] = [KEYLABEL_PAT_VAL_PLOT, KEYLABEL_PAT_PERC_PLOT]
 
     # HVF field size:
     HVF_30_2 = "30-2"
@@ -236,7 +237,10 @@ class Hvf_Object:
     @classmethod
     def get_hvf_object_from_image(cls, hvf_image, debug_dir="", rekognition=False):
         if debug_dir:
-            shutil.rmtree(debug_dir)
+            try:
+                shutil.rmtree(debug_dir)
+            except Exception:
+                pass
             os.makedirs(debug_dir, exist_ok=True)
 
         cls.debug_dir = debug_dir
@@ -458,14 +462,14 @@ class Hvf_Object:
         # Dates written as YYYYMMDD, so convert it to a readable format
         # MM-DD-YYYY
         field = str(dicom_ds.PatientBirthDate)
-        field = "{}-{}-{}".format(field[4:6], field[6:8], field[0:4])
+        field = f"{field[4:6]}-{field[6:8]}-{field[0:4]}"
         hvf_metadata[Hvf_Object.KEYLABEL_DOB] = field
 
         # ===== TEST DATE =====
         # Dates written as YYYYMMDD, so convert it to a readable format
         # MM-DD-YYYY
         field = str(dicom_ds.StudyDate)
-        field = "{}-{}-{}".format(field[4:6], field[6:8], field[0:4])
+        field = f"{field[4:6]}-{field[6:8]}-{field[0:4]}"
         hvf_metadata[Hvf_Object.KEYLABEL_TEST_DATE] = field
 
         # ===== LATERALITY =====
@@ -603,17 +607,17 @@ class Hvf_Object:
 
         hvf_metadata[Hvf_Object.KEYLABEL_PUPIL_DIAMETER] = pupil_size
 
-        sphere = "{0:.2f}".format(float(sphere))
-        cylinder = "{0:.2f}".format(float(cylinder))
+        sphere = f"{float(sphere):.2f}"
+        cylinder = f"{float(cylinder):.2f}"
         axis = str(int(float(axis)))
 
         if float(sphere) > 0:
             sphere = "+" + str(sphere)
 
         if not (cylinder == "0.00"):
-            rx = "{}DS +{}DC X {}".format(sphere, cylinder, axis)
+            rx = f"{sphere}DS +{cylinder}DC X {axis}"
         elif not (sphere == "0.00"):
-            rx = "{}DS".format(sphere)
+            rx = f"{sphere}DS"
         else:
             rx = "+0.00DS"
 
@@ -621,16 +625,16 @@ class Hvf_Object:
 
         # ===== MD/PSD/VFI DETECTION =====
         md = str(dicom_ds.ResultsNormalsSequence[0].GlobalDeviationFromNormal)
-        md = "{:0.2f}".format(float(md))
+        md = f"{float(md):0.2f}"
         hvf_metadata[Hvf_Object.KEYLABEL_MD] = md
 
         psd = str(dicom_ds.ResultsNormalsSequence[0].LocalizedDeviationFromNormal)
-        psd = "{:0.2f}".format(float(psd))
+        psd = f"{float(psd):0.2f}"
         hvf_metadata[Hvf_Object.KEYLABEL_PSD] = psd
 
         try:
             vfi = str(dicom_ds.VisualFieldGlobalResultsIndexSequence[0].DataObservationSequence[0].NumericValue)
-            vfi = "{:0.0f}%".format(int(vfi))
+            vfi = f"{int(vfi):0.0f}%"
             hvf_metadata[Hvf_Object.KEYLABEL_VFI] = vfi
         except Exception:
             hvf_metadata[Hvf_Object.KEYLABEL_VFI] = ""
@@ -994,7 +998,7 @@ class Hvf_Object:
                 header_slice, proc_img=True, debug_dir=Hvf_Object.debug_dir, column=False, rekognition=self.rekognition
             )
         else:
-            from tesserocr import PSM, PyTessBaseAPI
+            from tesserocr import PSM, PyTessBaseAPI  # type: ignore
 
             Ocr_Utils.OCR_API_HANDLE = PyTessBaseAPI(psm=PSM.SPARSE_TEXT_OSD)
             header_text = Ocr_Utils.perform_ocr(
@@ -1506,9 +1510,9 @@ class Hvf_Object:
                 # Construct our final field. To standardize formatting/minimize
                 # extra spaces, construct as an array and join:
                 if cyl:
-                    rx = "{}DS {}DC X {}".format(sphere, cyl, axis)
+                    rx = f"{sphere}DS {cyl}DC X {axis}"
                 elif sphere:
-                    rx = "{}DS".format(sphere)
+                    rx = f"{sphere}DS"
                 else:
                     rx = "+0.00DS"
 
@@ -1584,7 +1588,7 @@ class Hvf_Object:
 
         if layout_version == Hvf_Object.HVF_LAYOUT_V3:
             # Can either be MD<FIELD SIZE> (eg, MD24-2) or MD; regex for optional
-            label = "MD{} dB".format(field_size)
+            label = f"MD{field_size} dB"
             regex_string = "MD(?:" + field_size + r")?:\s*(.*)dB{e<=2}"
             field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field(
                 label, regex_string, tokenized_dev_val_list
@@ -1609,7 +1613,7 @@ class Hvf_Object:
 
         if layout_version == Hvf_Object.HVF_LAYOUT_V3:
             # Can either be PSD<FIELD SIZE> (eg, PSD24-2) or PSD; regex for optional
-            label = "PSD{} dB".format(field_size)
+            label = f"PSD{field_size} dB"
             regex_string = "PSD(?:" + field_size + r")?:\s*(.*)dB{e<=2}"
             field, tokenized_dev_val_list = Regex_Utils.fuzzy_regex_middle_field(
                 label, regex_string, tokenized_dev_val_list

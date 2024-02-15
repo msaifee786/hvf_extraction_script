@@ -23,21 +23,19 @@
 ###############################################################################
 
 # Import necessary packages
-import cv2
-import sys
 import os
+import pkgutil
+
+import cv2
 
 # Import some helper packages:
 import numpy as np
-from PIL import Image
-from functools import reduce
 
-import pkgutil
+from hvf_extraction_script.utilities.file_utils import File_Utils
+from hvf_extraction_script.utilities.image_utils import Image_Utils
 
 # Import some of our own written modules:
 from hvf_extraction_script.utilities.logger import Logger
-from hvf_extraction_script.utilities.image_utils import Image_Utils
-from hvf_extraction_script.utilities.file_utils import File_Utils
 
 
 class Hvf_Perc_Icon:

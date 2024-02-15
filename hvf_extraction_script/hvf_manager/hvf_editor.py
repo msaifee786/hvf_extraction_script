@@ -7,17 +7,17 @@
 ###############################################################################
 
 # Import necessary packages
-import numpy as np
 import copy
 
-# Import logger class to handle any messages:
-from hvf_extraction_script.utilities.logger import Logger
+import numpy as np
 
 # Import the HVF_Object class and helper classes
 from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object
-from hvf_extraction_script.hvf_data.hvf_plot_array import Hvf_Plot_Array
 from hvf_extraction_script.hvf_data.hvf_perc_icon import Hvf_Perc_Icon
+from hvf_extraction_script.hvf_data.hvf_plot_array import Hvf_Plot_Array
 from hvf_extraction_script.hvf_data.hvf_value import Hvf_Value
+
+# Import logger class to handle any messages:
 
 
 class Hvf_Editor:

@@ -23,28 +23,23 @@
 ###############################################################################
 
 # Import necessary packages
-import cv2
-import sys
 import os
+import pkgutil
+
+import cv2
 
 # Import some helper packages:
 import numpy as np
-from PIL import Image
-from functools import reduce
 
-import pkgutil
-import random
-
-# Import some of our own written modules:
-
-# For error/debug logging:
-from hvf_extraction_script.utilities.logger import Logger
+# For reading files:
+from hvf_extraction_script.utilities.file_utils import File_Utils
 
 # General purpose image functions:
 from hvf_extraction_script.utilities.image_utils import Image_Utils
 
-# For reading files:
-from hvf_extraction_script.utilities.file_utils import File_Utils
+# Import some of our own written modules:
+# For error/debug logging:
+from hvf_extraction_script.utilities.logger import Logger
 
 
 class Hvf_Value:
@@ -116,7 +111,7 @@ class Hvf_Value:
         exception_list = [Hvf_Value.VALUE_FAILURE, Hvf_Value.VALUE_NO_VALUE, Hvf_Value.VALUE_BELOW_THRESHOLD]
 
         # In case value generated is incorrect, bring within normal limits:
-        if not (value in exception_list):
+        if value not in exception_list:
             if value > Hvf_Value.VALUE_MAX_VALUE:
                 value = Hvf_Value.VALUE_MAX_VALUE
 
@@ -194,7 +189,7 @@ class Hvf_Value:
                 icon_template = cv2.cvtColor(File_Utils.read_image_from_file(value_icon_full_path), cv2.COLOR_BGR2GRAY)
 
                 # Add to value icon template dictionary:
-                if not (ii in cls.value_icon_templates):
+                if ii not in cls.value_icon_templates:
                     cls.value_icon_templates[ii] = {}
 
                 cls.value_icon_templates[ii][dir] = icon_template
@@ -568,7 +563,7 @@ class Hvf_Value:
                     else:
                         best_val = 1
 
-        Logger.get_logger().log_msg(Logger.DEBUG_FLAG_DEBUG, "Best match {}, best dir {}".format(best_val, best_dir))
+        Logger.get_logger().log_msg(Logger.DEBUG_FLAG_DEBUG, f"Best match {best_val}, best dir {best_dir}")
 
         return best_val, best_loc, best_scale_factor, best_match
 

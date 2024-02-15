@@ -7,10 +7,9 @@
 ###############################################################################
 
 # Import necessary packages
-import sys
 import os
+
 import cv2
-from shutil import copyfile
 import pydicom
 
 
@@ -110,7 +109,7 @@ class File_Utils:
     # Given file path, reads in content as string and returns it
     @staticmethod
     def read_text_from_file(file_path):
-        f = open(file_path, "r")
+        f = open(file_path)
         text_string = f.read()
         f.close()
         return text_string

@@ -10,10 +10,8 @@
 ###############################################################################
 
 # Import necessary packages
-import numpy as np
 
 # Import logger class to handle any messages:
-from hvf_extraction_script.utilities.logger import Logger
 
 # Import the HVF_Object class:
 from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object
@@ -50,11 +48,11 @@ class Hvf_Patient_Container:
         hvf_obj_date_key = hvf_obj.metadata.get(Hvf_Object.KEYLABEL_TEST_DATE)
 
         # First, is patient present in this container? If its not, add patient in
-        if not (hvf_obj_patient_id in self.hvf_obj_dict):
+        if hvf_obj_patient_id not in self.hvf_obj_dict:
             self.hvf_obj_dict[hvf_obj_patient_id] = {}
 
         # Now, we know patient is present. Is laterality present? If not, add it in
-        if not (hvf_obj_laterality in self.hvf_obj_dict[hvf_obj_patient_id]):
+        if hvf_obj_laterality not in self.hvf_obj_dict[hvf_obj_patient_id]:
             self.hvf_obj_dict[hvf_obj_patient_id][hvf_obj_laterality] = {}
 
         # Lastly, add in HVF object:

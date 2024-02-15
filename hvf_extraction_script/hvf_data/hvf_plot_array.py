@@ -23,6 +23,7 @@ import pkgutil
 
 import cv2
 import numpy as np
+
 from hvf_extraction_script.hvf_data.hvf_perc_icon import Hvf_Perc_Icon
 from hvf_extraction_script.hvf_data.hvf_value import Hvf_Value
 from hvf_extraction_script.utilities.file_utils import File_Utils
@@ -151,7 +152,7 @@ class Hvf_Plot_Array:
                     hvf_image_gray, y_ratio, y_size, x_ratio, x_size, plot_type, icon_type
                 )
             except Exception as e:
-                print(f"WARN: failed Hvf_Value.get_plot_from_image(): {plot_type}, {icon_type}\n{str(e)}")
+                print(f"WARN: failed Hvf_Value.get_plot_from_image(): {plot_type}, {icon_type}\n{e!s}")
 
         return Hvf_Plot_Array(plot_type, icon_type, plot_array, plot_img)
 
@@ -504,7 +505,7 @@ class Hvf_Plot_Array:
 
             Logger.get_logger().log_msg(
                 Logger.DEBUG_FLAG_DEBUG,
-                "Number of pixel at border: ({}, {}) => {}".format(str(x_start), str(x_end), str(num_pix)),
+                f"Number of pixel at border: ({x_start!s}, {x_end!s}) => {num_pix!s}",
             )
             Logger.get_logger().log_msg(Logger.DEBUG_FLAG_DEBUG, "Threshold pixel value: " + str(threshold_pixel_value))
             # The bottom line tends to be problematic (still some residual Left
@@ -660,13 +661,13 @@ class Hvf_Plot_Array:
 
             if vertical_slice[y, x] == 255:
                 # Grid line falls into blank area - we can record value
-                Logger.get_logger().log_msg(Logger.DEBUG_FLAG_INFO, "Prelim column {} grid line works".format(c))
+                Logger.get_logger().log_msg(Logger.DEBUG_FLAG_INFO, f"Prelim column {c} grid line works")
                 col_list.append(col_val)
 
             else:
                 # It coincides -> convert it to the closest centroid of a blank area
                 Logger.get_logger().log_msg(
-                    Logger.DEBUG_FLAG_INFO, "Shifting column grid line {} to nearest centroid".format(c)
+                    Logger.DEBUG_FLAG_INFO, f"Shifting column grid line {c} to nearest centroid"
                 )
                 closest_centroid = list(sorted(centroid_vertical, key=(lambda x: abs(x - col_val))))[0]
 
@@ -693,13 +694,13 @@ class Hvf_Plot_Array:
 
             if horizontal_slice[y, x] == 255:
                 # Grid line falls into blank area - we can record value
-                Logger.get_logger().log_msg(Logger.DEBUG_FLAG_INFO, "Prelim row {} grid line works".format(r))
+                Logger.get_logger().log_msg(Logger.DEBUG_FLAG_INFO, f"Prelim row {r} grid line works")
                 row_list.append(row_val)
 
             else:
                 # It coincides -> convert it to the closest centroid of a blank area
                 Logger.get_logger().log_msg(
-                    Logger.DEBUG_FLAG_INFO, "Shifting row grid line {} to nearest centroid".format(r)
+                    Logger.DEBUG_FLAG_INFO, f"Shifting row grid line {r} to nearest centroid"
                 )
                 closest_centroid = list(sorted(centroid_horizontal, key=(lambda y: abs(y - row_val))))[0]
 

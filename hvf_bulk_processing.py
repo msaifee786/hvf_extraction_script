@@ -28,27 +28,21 @@
 ###############################################################################
 
 # Import necessary packages
-import cv2
-import sys
 import argparse
-import difflib
-from shutil import copyfile
 import os
-import numpy as np
 
 # import dlib
-
 # Import the HVF_Object class
 from hvf_extraction_script.hvf_data.hvf_object import Hvf_Object
 
-# Import logger class to handle any messages:
-from hvf_extraction_script.utilities.logger import Logger
+# Import tester class:
+from hvf_extraction_script.hvf_manager.hvf_export import Hvf_Export
 
 # Import file utilities
 from hvf_extraction_script.utilities.file_utils import File_Utils
 
-# Import tester class:
-from hvf_extraction_script.hvf_manager.hvf_export import Hvf_Export
+# Import logger class to handle any messages:
+from hvf_extraction_script.utilities.logger import Logger
 
 # Construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
