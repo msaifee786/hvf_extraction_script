@@ -1,3 +1,5 @@
 **/__pycache__
 hvf_test_cases/*
 .DS_Store
+build/
+*.egg-info/
